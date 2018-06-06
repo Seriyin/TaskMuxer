@@ -1,0 +1,5 @@
+rootProject.name = 'Muxer'
+include 'muxer-client'
+include 'muxer-server'
+include 'muxer-commons'
+
