@@ -6,6 +6,9 @@ version = "1.0-SNAPSHOT"
 
 
 dependencies {
+    implementation("io.atomix.catalyst", "catalyst-transport", extra["catalyst_version"] as String)
+    implementation("io.atomix.catalyst", "catalyst-concurrent", extra["catalyst_version"] as String)
+    implementation("io.atomix.catalyst", "catalyst-serializer", extra["catalyst_version"] as String)
     testRuntime("org.junit.platform", "junit-platform-launcher", extra["junit-platform_version"] as String)
     testRuntime("org.junit.platform", "junit-platform-runner", extra["junit-platform_version"] as String)
     testRuntime("org.junit.platform", "junit-platform-engine", extra["junit-platform_version"] as String)
