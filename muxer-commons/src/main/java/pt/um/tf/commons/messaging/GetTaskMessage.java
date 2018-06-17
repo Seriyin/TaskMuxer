@@ -4,26 +4,14 @@ import io.atomix.catalyst.buffer.BufferInput;
 import io.atomix.catalyst.buffer.BufferOutput;
 import io.atomix.catalyst.serializer.CatalystSerializable;
 import io.atomix.catalyst.serializer.Serializer;
-import pt.um.tf.commons.task.Task;
+import io.atomix.catalyst.transport.Address;
 
-public class GetTaskMessage<T> implements CatalystSerializable {
-    private Task<T> t;
-
-    public GetTaskMessage(Task<T> t) {
-        this.t = t;
-    }
-
-    public Task<T> getTask() {
-        return t;
-    }
+public class GetTaskMessage implements CatalystSerializable {
+    public GetTaskMessage() {}
 
     @Override
-    public void writeObject(BufferOutput<?> buffer, Serializer serializer) {
-        t.writeObject(buffer, serializer);
-    }
+    public void writeObject(BufferOutput<?> buffer, Serializer serializer) {}
 
     @Override
-    public void readObject(BufferInput<?> buffer, Serializer serializer) {
-        t = serializer.readObject(buffer);
-    }
+    public void readObject(BufferInput<?> buffer, Serializer serializer) {}
 }
