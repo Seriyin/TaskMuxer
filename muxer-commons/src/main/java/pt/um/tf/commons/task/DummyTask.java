@@ -19,7 +19,7 @@ import java.util.logging.Logger;
 
 public class DummyTask implements AsyncTask<Long> {
     private static Logger LOGGER = Logger.getLogger(DummyTask.class.getName());
-    private static long LOOPS_TO_DO = 1073741824;
+    private static long LOOPS_TO_DO = 65536;
     private URL url;
     private Address address;
     private CompletableFuture<Result<Long>> cp;
@@ -69,6 +69,11 @@ public class DummyTask implements AsyncTask<Long> {
                 id *= 22;
                 id += 2;
                 id /= r.nextLong();
+                try {
+                    Thread.sleep(60);
+                } catch (InterruptedException e) {
+                    //Silent night, Holy night.
+                }
             }
             return new DummyResult(id);
         }
