@@ -1,6 +1,8 @@
 package pt.um.tf.commons.task;
 
-public interface Result<T> {
+import io.atomix.catalyst.serializer.CatalystSerializable;
+
+public interface Result<T> extends CatalystSerializable {
     T completeWithResult();
     boolean completedSuccessfully();
     Exception completedWithException();

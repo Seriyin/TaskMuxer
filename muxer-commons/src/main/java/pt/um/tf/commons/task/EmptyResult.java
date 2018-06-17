@@ -4,24 +4,24 @@ import io.atomix.catalyst.buffer.BufferInput;
 import io.atomix.catalyst.buffer.BufferOutput;
 import io.atomix.catalyst.serializer.Serializer;
 
-public class DummyResult implements Result<Long> {
-    private long id;
-    private Exception e;
+public class EmptyResult implements Result<Void> {
     private boolean success;
+    private Exception e;
 
-    public DummyResult(long id) {
-        this.id = id;
-        success = true;
-    }
-
-    public DummyResult(Exception e) {
+    public EmptyResult(boolean success, Exception e) {
+        this.success = success;
         this.e = e;
-        success = false;
     }
+
+    public EmptyResult(boolean success) {
+        this.success = success;
+    }
+
+    protected EmptyResult() {}
 
     @Override
-    public Long completeWithResult() {
-        return id;
+    public Void completeWithResult() {
+        return null;
     }
 
     @Override
@@ -36,15 +36,14 @@ public class DummyResult implements Result<Long> {
 
     @Override
     public void writeObject(BufferOutput<?> buffer, Serializer serializer) {
-        buffer.writeLong(id);
-        serializer.writeObject(e);
         buffer.writeBoolean(success);
+        serializer.writeObject(e);
     }
 
     @Override
     public void readObject(BufferInput<?> buffer, Serializer serializer) {
-        id = buffer.readLong();
-        e = serializer.readObject(buffer);
         success = buffer.readBoolean();
+        e = serializer.readObject(buffer);
+
     }
 }
