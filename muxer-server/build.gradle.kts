@@ -18,6 +18,10 @@ dependencies {
     implementation(project(":muxer-commons"))
 }
 
+configure<ApplicationPluginConvention> {
+    mainClassName = "pt.um.lei.tf.taskmux.server.Server"
+}
+
 configure<JavaPluginConvention> {
     sourceCompatibility = JavaVersion.VERSION_1_10
     targetCompatibility = JavaVersion.VERSION_1_10
