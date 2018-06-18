@@ -11,6 +11,7 @@ subprojects {
     extra.set("spread_version", "4.4.0")
     extra.set("catalyst_version", "1.2.1")
     extra.set("ekit_version", "1.2-SNAPSHOT")
+    extra.set("slf4j_version", "1.8.0-beta2")
 
     repositories {
         mavenCentral()
