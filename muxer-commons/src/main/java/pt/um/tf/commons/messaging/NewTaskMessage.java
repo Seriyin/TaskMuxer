@@ -7,11 +7,11 @@ import io.atomix.catalyst.serializer.Serializer;
 import io.atomix.catalyst.transport.Address;
 import pt.um.tf.commons.task.Task;
 
-public class NewTaskMessage implements CatalystSerializable {
+public class NewTaskMessage implements CommonMessage {
     private Task task;
 
 
-    public NewTaskMessage(Task task, String clientId) {
+    public NewTaskMessage(Task task) {
         this.task = task;
     }
 

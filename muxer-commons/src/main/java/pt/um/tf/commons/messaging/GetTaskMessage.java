@@ -6,7 +6,7 @@ import io.atomix.catalyst.serializer.CatalystSerializable;
 import io.atomix.catalyst.serializer.Serializer;
 import io.atomix.catalyst.transport.Address;
 
-public class GetTaskMessage implements CatalystSerializable {
+public class GetTaskMessage implements CommonMessage {
     public GetTaskMessage() {}
 
     @Override

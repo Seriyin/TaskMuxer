@@ -6,7 +6,7 @@ import io.atomix.catalyst.serializer.CatalystSerializable;
 import io.atomix.catalyst.serializer.Serializer;
 import pt.um.tf.commons.task.Result;
 
-public class ResultMessage implements CatalystSerializable {
+public class ResultMessage implements CommonMessage {
     private Result result;
 
     public ResultMessage(Result result) {

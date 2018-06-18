@@ -8,7 +8,7 @@ import io.atomix.catalyst.transport.Address;
 
 import java.net.URL;
 
-public class UrlMessage implements CatalystSerializable {
+public class UrlMessage implements CommonMessage {
     private URL url;
 
     public UrlMessage(URL url) {

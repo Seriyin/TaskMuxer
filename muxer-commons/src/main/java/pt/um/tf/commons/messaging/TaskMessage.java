@@ -10,7 +10,7 @@ import pt.um.tf.commons.task.Task;
  * Type erase the task.
  * Check concrete type on client.
  */
-public class TaskMessage implements CatalystSerializable {
+public class TaskMessage implements CommonMessage {
     private Task task;
 
     public TaskMessage(Task task) {
