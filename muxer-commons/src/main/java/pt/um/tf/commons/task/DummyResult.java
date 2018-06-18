@@ -4,7 +4,7 @@ import io.atomix.catalyst.buffer.BufferInput;
 import io.atomix.catalyst.buffer.BufferOutput;
 import io.atomix.catalyst.serializer.Serializer;
 
-public class DummyResult implements Result<Long> {
+public class DummyResult extends Result<Long> {
     private long id;
     private Exception e;
     private boolean success;

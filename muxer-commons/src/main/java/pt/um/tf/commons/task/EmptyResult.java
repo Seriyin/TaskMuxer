@@ -4,7 +4,7 @@ import io.atomix.catalyst.buffer.BufferInput;
 import io.atomix.catalyst.buffer.BufferOutput;
 import io.atomix.catalyst.serializer.Serializer;
 
-public class EmptyResult implements Result<Void> {
+public class EmptyResult extends Result<Void> {
     private boolean success;
     private Exception e;
 
