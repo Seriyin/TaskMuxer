@@ -5,7 +5,17 @@ import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.util.Base64;
 
-public class Utils {
+public class URLGenerator {
+    private SecureRandom secureRandom;
+
+    public URLGenerator (String seed) {
+        secureRandom = new SecureRandom(seed.getBytes(StandardCharsets.UTF_8));
+    }
+
+    public URLGenerator() {
+        secureRandom = new SecureRandom();
+    }
+
     /**
      * Returns a Base64 Encoding of the SHA-256 hash of the provided data string.
      */
@@ -23,9 +33,12 @@ public class Utils {
     }
 
     public String generateRandomUrlPostfix() {
-        var tlr = new SecureRandom();
         var b = new byte[512];
-        tlr.nextBytes(b);
+        secureRandom.nextBytes(b);
         return new String(b, StandardCharsets.UTF_8);
+    }
+
+    public String generateURLPostFix() {
+        return getSHA256(generateRandomUrlPostfix());
     }
 }
