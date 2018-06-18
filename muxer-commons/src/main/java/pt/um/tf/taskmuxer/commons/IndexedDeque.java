@@ -1,4 +1,4 @@
-package pt.um.tf.commons;
+package pt.um.tf.taskmuxer.commons;
 
 
 import java.io.Serializable;
@@ -631,11 +631,11 @@ public class IndexedDeque<E> extends AbstractCollection<E>
      * @return an iterator over the elements in this deque
      */
     public Iterator<E> iterator() {
-        return new pt.um.tf.commons.IndexedDeque.DeqIterator();
+        return new IndexedDeque.DeqIterator();
     }
 
     public Iterator<E> descendingIterator() {
-        return new pt.um.tf.commons.IndexedDeque.DescendingIterator();
+        return new IndexedDeque.DescendingIterator();
     }
 
     private class DeqIterator implements Iterator<E> {
@@ -782,7 +782,7 @@ public class IndexedDeque<E> extends AbstractCollection<E>
      * @since 1.8
      */
     public Spliterator<E> spliterator() {
-        return new pt.um.tf.commons.IndexedDeque.DeqSpliterator();
+        return new IndexedDeque.DeqSpliterator();
     }
 
     final class DeqSpliterator implements Spliterator<E> {
@@ -812,12 +812,12 @@ public class IndexedDeque<E> extends AbstractCollection<E>
             return t;
         }
 
-        public pt.um.tf.commons.IndexedDeque.DeqSpliterator trySplit() {
+        public IndexedDeque.DeqSpliterator trySplit() {
             final Object[] es = elements;
             final int i, n;
             return ((n = sub(getFence(), i = cursor, es.length) >> 1) <= 0)
                    ? null
-                   : new pt.um.tf.commons.IndexedDeque.DeqSpliterator(i, cursor = inc(i, n, es.length));
+                   : new IndexedDeque.DeqSpliterator(i, cursor = inc(i, n, es.length));
         }
 
         public void forEachRemaining(Consumer<? super E> action) {
@@ -1138,10 +1138,10 @@ public class IndexedDeque<E> extends AbstractCollection<E>
      *
      * @return a copy of this deque
      */
-    public pt.um.tf.commons.IndexedDeque<E> clone() {
+    public IndexedDeque<E> clone() {
         try {
             @SuppressWarnings("unchecked")
-            pt.um.tf.commons.IndexedDeque<E> result = (pt.um.tf.commons.IndexedDeque<E>) super.clone();
+            IndexedDeque<E> result = (IndexedDeque<E>) super.clone();
             result.elements = Arrays.copyOf(elements, elements.length);
             return result;
         } catch (CloneNotSupportedException e) {

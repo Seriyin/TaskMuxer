@@ -1,4 +1,4 @@
-package pt.um.tf.commons.error;
+package pt.um.tf.taskmuxer.commons.error;
 
 import io.atomix.catalyst.buffer.BufferInput;
 import io.atomix.catalyst.buffer.BufferOutput;

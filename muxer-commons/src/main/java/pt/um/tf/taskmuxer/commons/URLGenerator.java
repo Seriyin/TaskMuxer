@@ -1,4 +1,4 @@
-package pt.um.tf.commons;
+package pt.um.tf.taskmuxer.commons;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;

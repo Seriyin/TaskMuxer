@@ -1,27 +1,27 @@
-package pt.um.tf.commons.messaging;
+package pt.um.tf.taskmuxer.commons.messaging;
 
 import io.atomix.catalyst.buffer.BufferInput;
 import io.atomix.catalyst.buffer.BufferOutput;
-import io.atomix.catalyst.serializer.CatalystSerializable;
 import io.atomix.catalyst.serializer.Serializer;
-import io.atomix.catalyst.transport.Address;
-import pt.um.tf.commons.task.Task;
+import pt.um.tf.taskmuxer.commons.task.Task;
 
-public class NewTaskMessage implements CommonMessage {
+/**
+ * Type erase the task.
+ * Check concrete type on client.
+ */
+public class TaskMessage implements CommonMessage {
     private Task task;
 
-
-    public NewTaskMessage(Task task) {
+    public TaskMessage(Task task) {
         this.task = task;
     }
 
-    protected NewTaskMessage() {}
-
-
+    protected TaskMessage() {}
 
     public Task getTask() {
         return task;
     }
+
 
     @Override
     public void writeObject(BufferOutput<?> buffer, Serializer serializer) {

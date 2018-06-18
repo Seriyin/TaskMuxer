@@ -1,4 +1,4 @@
-package pt.um.tf.commons.messaging;
+package pt.um.tf.taskmuxer.commons.messaging;
 
 import io.atomix.catalyst.serializer.CatalystSerializable;
 

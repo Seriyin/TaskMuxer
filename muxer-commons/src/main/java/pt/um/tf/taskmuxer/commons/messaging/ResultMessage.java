@@ -1,10 +1,9 @@
-package pt.um.tf.commons.messaging;
+package pt.um.tf.taskmuxer.commons.messaging;
 
 import io.atomix.catalyst.buffer.BufferInput;
 import io.atomix.catalyst.buffer.BufferOutput;
-import io.atomix.catalyst.serializer.CatalystSerializable;
 import io.atomix.catalyst.serializer.Serializer;
-import pt.um.tf.commons.task.Result;
+import pt.um.tf.taskmuxer.commons.task.Result;
 
 public class ResultMessage implements CommonMessage {
     private Result result;

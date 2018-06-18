@@ -1,4 +1,4 @@
-package pt.um.tf.commons.task;
+package pt.um.tf.taskmuxer.commons.task;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;

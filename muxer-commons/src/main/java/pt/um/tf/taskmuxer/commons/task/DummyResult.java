@@ -1,27 +1,27 @@
-package pt.um.tf.commons.task;
+package pt.um.tf.taskmuxer.commons.task;
 
 import io.atomix.catalyst.buffer.BufferInput;
 import io.atomix.catalyst.buffer.BufferOutput;
 import io.atomix.catalyst.serializer.Serializer;
 
-public class EmptyResult extends Result<Void> {
-    private boolean success;
+public class DummyResult extends Result<Long> {
+    private long id;
     private Exception e;
+    private boolean success;
 
-    public EmptyResult(boolean success, Exception e) {
-        this.success = success;
+    public DummyResult(long id) {
+        this.id = id;
+        success = true;
+    }
+
+    public DummyResult(Exception e) {
         this.e = e;
+        success = false;
     }
-
-    public EmptyResult(boolean success) {
-        this.success = success;
-    }
-
-    protected EmptyResult() {}
 
     @Override
-    public Void completeWithResult() {
-        return null;
+    public Long completeWithResult() {
+        return id;
     }
 
     @Override
@@ -36,14 +36,15 @@ public class EmptyResult extends Result<Void> {
 
     @Override
     public void writeObject(BufferOutput<?> buffer, Serializer serializer) {
-        buffer.writeBoolean(success);
+        buffer.writeLong(id);
         serializer.writeObject(e);
+        buffer.writeBoolean(success);
     }
 
     @Override
     public void readObject(BufferInput<?> buffer, Serializer serializer) {
-        success = buffer.readBoolean();
+        id = buffer.readLong();
         e = serializer.readObject(buffer);
-
+        success = buffer.readBoolean();
     }
 }

@@ -1,13 +1,15 @@
-package pt.um.tf.commons.messaging;
+package pt.um.tf.taskmuxer.commons.error;
 
 import io.atomix.catalyst.buffer.BufferInput;
 import io.atomix.catalyst.buffer.BufferOutput;
 import io.atomix.catalyst.serializer.CatalystSerializable;
 import io.atomix.catalyst.serializer.Serializer;
-import io.atomix.catalyst.transport.Address;
 
-public class GetTaskMessage implements CommonMessage {
-    public GetTaskMessage() {}
+public class UnknownClientException extends Exception implements CatalystSerializable {
+    @Override
+    public String getMessage() {
+        return super.getMessage() + System.lineSeparator() + "Unknown Client";
+    }
 
     @Override
     public void writeObject(BufferOutput<?> buffer, Serializer serializer) {}

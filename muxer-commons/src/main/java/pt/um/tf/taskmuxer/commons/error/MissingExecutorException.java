@@ -1,14 +1,14 @@
-package pt.um.tf.commons.error;
+package pt.um.tf.taskmuxer.commons.error;
 
 import io.atomix.catalyst.buffer.BufferInput;
 import io.atomix.catalyst.buffer.BufferOutput;
 import io.atomix.catalyst.serializer.CatalystSerializable;
 import io.atomix.catalyst.serializer.Serializer;
 
-public class UnknownClientException extends Exception implements CatalystSerializable {
+public class MissingExecutorException extends Exception implements CatalystSerializable {
     @Override
     public String getMessage() {
-        return super.getMessage() + System.lineSeparator() + "Unknown Client";
+        return "Missing Executor to execute task in.";
     }
 
     @Override

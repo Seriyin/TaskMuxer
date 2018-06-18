@@ -1,9 +1,9 @@
-package pt.um.tf.commons.task;
+package pt.um.tf.taskmuxer.commons.task;
 
 import io.atomix.catalyst.serializer.CatalystSerializable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import pt.um.tf.commons.URLGenerator;
+import pt.um.tf.taskmuxer.commons.URLGenerator;
 
 import java.net.MalformedURLException;
 import java.net.URI;
