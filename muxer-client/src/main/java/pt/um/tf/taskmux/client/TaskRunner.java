@@ -3,10 +3,10 @@ package pt.um.tf.taskmux.client;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pt.haslab.ekit.Spread;
-import pt.um.tf.commons.messaging.UrlMessage;
-import pt.um.tf.commons.task.DummyTask;
-import pt.um.tf.commons.task.Result;
-import pt.um.tf.commons.task.Task;
+import pt.um.tf.taskmuxer.commons.messaging.UrlMessage;
+import pt.um.tf.taskmuxer.commons.task.DummyTask;
+import pt.um.tf.taskmuxer.commons.task.Result;
+import pt.um.tf.taskmuxer.commons.task.Task;
 import spread.SpreadGroup;
 import spread.SpreadMessage;
 
