@@ -2,24 +2,21 @@ package pt.um.tf.taskmux.server.messaging;
 
 import io.atomix.catalyst.buffer.BufferInput;
 import io.atomix.catalyst.buffer.BufferOutput;
-import io.atomix.catalyst.serializer.CatalystSerializable;
 import io.atomix.catalyst.serializer.Serializer;
-import pt.um.tf.commons.task.Task;
-import spread.SpreadGroup;
+import pt.um.tf.taskmuxer.commons.task.Task;
 
 import java.util.Collection;
-import java.util.List;
 
 public class InboundMessage implements StateMessage {
     private Collection<Task> tasks;
     private boolean more;
     private long sequence;
-    private SpreadGroup receiver;
+    private String receiver;
 
     public InboundMessage(Collection<Task> tasks,
                           boolean more,
                           long sequence,
-                          SpreadGroup receiver) {
+                          String receiver) {
         this.tasks = tasks;
         this.more = more;
         this.sequence = sequence;
@@ -41,23 +38,23 @@ public class InboundMessage implements StateMessage {
         return sequence;
     }
 
-    public SpreadGroup getReceiver() {
+    public String getReceiver() {
         return receiver;
     }
 
     @Override
     public void writeObject(BufferOutput<?> buffer, Serializer serializer) {
+        buffer.writeString(receiver);
         buffer.writeBoolean(more);
         buffer.writeLong(sequence);
-        serializer.writeObject(receiver);
         serializer.writeObject(tasks);
     }
 
     @Override
     public void readObject(BufferInput<?> buffer, Serializer serializer) {
+        receiver = buffer.readString();
         more = buffer.readBoolean();
         sequence = buffer.readLong();
-        receiver = serializer.readObject(buffer);
         tasks = serializer.readObject(buffer);
     }
 }

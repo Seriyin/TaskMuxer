@@ -3,16 +3,15 @@ package pt.um.tf.taskmux.server.messaging;
 import io.atomix.catalyst.buffer.BufferInput;
 import io.atomix.catalyst.buffer.BufferOutput;
 import io.atomix.catalyst.serializer.Serializer;
-import pt.um.tf.commons.task.Task;
-import spread.SpreadGroup;
+import pt.um.tf.taskmuxer.commons.task.Task;
 
 import java.util.List;
 
 public class ClearMessage implements StateMessage {
     private List<Task> backToInbound;
-    private SpreadGroup clear;
+    private String clear;
 
-    public ClearMessage(List<Task> backToInbound, SpreadGroup clear) {
+    public ClearMessage(List<Task> backToInbound, String clear) {
         this.backToInbound = backToInbound;
         this.clear = clear;
     }
@@ -24,19 +23,19 @@ public class ClearMessage implements StateMessage {
         return backToInbound;
     }
 
-    public SpreadGroup getClear() {
+    public String getClear() {
         return clear;
     }
 
     @Override
     public void writeObject(BufferOutput<?> buffer, Serializer serializer) {
         serializer.writeObject(backToInbound);
-        serializer.writeObject(clear);
+        buffer.writeString(clear);
     }
 
     @Override
     public void readObject(BufferInput<?> buffer, Serializer serializer) {
         backToInbound = serializer.readObject(buffer);
-        clear = serializer.readObject(buffer);
+        clear = buffer.readString();
     }
 }
