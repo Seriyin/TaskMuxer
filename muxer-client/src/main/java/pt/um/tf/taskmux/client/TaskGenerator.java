@@ -1,8 +1,8 @@
 package pt.um.tf.taskmux.client;
 
 import pt.haslab.ekit.Spread;
-import pt.um.tf.taskmuxer.commons.messaging.NewTaskMessage;
-import pt.um.tf.taskmuxer.commons.task.DummyTask;
+import pt.um.tf.taskmux.commons.messaging.NewTaskMessage;
+import pt.um.tf.taskmux.commons.task.DummyTask;
 import spread.SpreadGroup;
 import spread.SpreadMessage;
 

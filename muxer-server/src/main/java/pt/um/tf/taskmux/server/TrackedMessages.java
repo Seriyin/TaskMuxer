@@ -1,6 +1,6 @@
 package pt.um.tf.taskmux.server;
 
-import pt.um.tf.taskmuxer.commons.IndexedDeque;
+import pt.um.tf.taskmux.commons.IndexedDeque;
 import pt.um.tf.taskmux.server.messaging.StateMessage;
 
 import java.util.function.Consumer;
