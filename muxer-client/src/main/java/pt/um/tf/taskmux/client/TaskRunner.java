@@ -3,15 +3,15 @@ package pt.um.tf.taskmux.client;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pt.haslab.ekit.Spread;
-import pt.um.tf.taskmuxer.commons.messaging.UrlMessage;
-import pt.um.tf.taskmuxer.commons.task.DummyTask;
-import pt.um.tf.taskmuxer.commons.task.Result;
-import pt.um.tf.taskmuxer.commons.task.Task;
+import pt.um.tf.taskmux.commons.messaging.URIMessage;
+import pt.um.tf.taskmux.commons.task.DummyTask;
+import pt.um.tf.taskmux.commons.task.Result;
+import pt.um.tf.taskmux.commons.task.Task;
 import spread.SpreadGroup;
 import spread.SpreadMessage;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.ArrayDeque;
+import java.util.Queue;
 import java.util.concurrent.ExecutorService;
 
 /**
@@ -20,7 +20,7 @@ import java.util.concurrent.ExecutorService;
  */
 public class TaskRunner {
     private final static Logger LOGGER = LoggerFactory.getLogger(TaskRunner.class);
-    private Set<Task> runningTasks;
+    private Queue<Task> runningTasks;
     private ExecutorService taskPool;
     private Spread toReport;
     private SpreadGroup maingroup;
@@ -29,7 +29,7 @@ public class TaskRunner {
     public TaskRunner(ExecutorService taskPool,
                       int barrier,
                       Spread toReport) {
-        runningTasks = new HashSet<>();
+        runningTasks = new ArrayDeque<>(barrier);
         this.taskPool = taskPool;
         this.maingroup = null;
         this.toReport = toReport;
@@ -51,10 +51,10 @@ public class TaskRunner {
                 var dt = (DummyTask) t;
                 dt.setExecutor(taskPool);
                 dt.start()
-                  .thenAcceptAsync(this::handler, taskPool)
-                  .thenRunAsync(() -> sendURLMessage(dt), taskPool)
+                  .thenAcceptAsync(r -> handler(dt, r), taskPool)
                   .exceptionally(th -> {
                       LOGGER.error("", th);
+                      runningTasks.remove();
                       return null;
                   });
                 runningTasks.add(t);
@@ -67,19 +67,21 @@ public class TaskRunner {
         return res;
     }
 
-    private void handler(Result<Long> longResult) {
+    private void handler(DummyTask dt, Result<Long> longResult) {
         //Result doesn't really matter.
         if(!longResult.completedSuccessfully()) {
             LOGGER.error("Failed task :", longResult.completedWithException());
         }
+        LOGGER.info("Completed task : " + longResult.completeWithResult());
+        runningTasks.remove();
+        sendURLMessage(dt);
     }
 
     private void sendURLMessage(Task ran) {
         var spm = new SpreadMessage();
         spm.addGroup(maingroup);
         spm.setSafe();
-        toReport.multicast(spm, new UrlMessage(ran.getURL()));
-        runningTasks.remove(ran);
+        toReport.multicast(spm, new URIMessage(ran.getURI()));
     }
 
     public boolean isBackedUp() {
