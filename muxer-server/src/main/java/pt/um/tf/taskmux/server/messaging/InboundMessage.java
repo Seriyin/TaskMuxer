@@ -1,10 +1,8 @@
 package pt.um.tf.taskmux.server.messaging;
 
-import io.atomix.catalyst.buffer.BufferInput;
-import io.atomix.catalyst.buffer.BufferOutput;
-import io.atomix.catalyst.serializer.Serializer;
-import pt.um.tf.taskmuxer.commons.task.Task;
+import pt.um.tf.taskmux.commons.task.Task;
 
+import java.io.Serializable;
 import java.util.Collection;
 
 public class InboundMessage implements StateMessage {
@@ -42,8 +40,10 @@ public class InboundMessage implements StateMessage {
         return receiver;
     }
 
+/*
     @Override
     public void writeObject(BufferOutput<?> buffer, Serializer serializer) {
+
         buffer.writeString(receiver);
         buffer.writeBoolean(more);
         buffer.writeLong(sequence);
@@ -57,4 +57,5 @@ public class InboundMessage implements StateMessage {
         sequence = buffer.readLong();
         tasks = serializer.readObject(buffer);
     }
+*/
 }

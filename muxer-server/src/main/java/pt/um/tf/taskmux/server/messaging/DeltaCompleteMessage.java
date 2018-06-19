@@ -1,9 +1,6 @@
 package pt.um.tf.taskmux.server.messaging;
 
-import io.atomix.catalyst.buffer.BufferInput;
-import io.atomix.catalyst.buffer.BufferOutput;
-import io.atomix.catalyst.serializer.Serializer;
-import pt.um.tf.taskmuxer.commons.task.Task;
+import pt.um.tf.taskmux.commons.task.Task;
 
 import java.util.Collection;
 
@@ -27,6 +24,7 @@ public class DeltaCompleteMessage implements StateMessage {
         return sender;
     }
 
+    /*
     @Override
     public void writeObject(BufferOutput<?> buffer, Serializer serializer) {
         serializer.writeObject(tasks);
@@ -38,4 +36,5 @@ public class DeltaCompleteMessage implements StateMessage {
         tasks = serializer.readObject(buffer);
         sender = serializer.readObject(buffer);
     }
+    */
 }
