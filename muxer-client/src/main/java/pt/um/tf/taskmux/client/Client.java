@@ -7,8 +7,14 @@ import io.atomix.catalyst.transport.Server;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pt.haslab.ekit.Spread;
-import pt.um.tf.taskmuxer.commons.messaging.*;
-import pt.um.tf.taskmuxer.commons.task.*;
+import pt.um.tf.taskmux.commons.error.DuplicateException;
+import pt.um.tf.taskmux.commons.error.MissingExecutorException;
+import pt.um.tf.taskmux.commons.error.NoAssignableTasksException;
+import pt.um.tf.taskmux.commons.error.UnknownClientException;
+import pt.um.tf.taskmux.commons.messaging.*;
+import pt.um.tf.taskmux.commons.task.DummyResult;
+import pt.um.tf.taskmux.commons.task.DummyTask;
+import pt.um.tf.taskmux.commons.task.EmptyResult;
 import spread.MembershipInfo;
 import spread.SpreadException;
 import spread.SpreadGroup;
@@ -17,6 +23,7 @@ import spread.SpreadMessage;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.URI;
 import java.util.*;
 import java.util.concurrent.ForkJoinPool;
 import java.util.stream.Collectors;
@@ -44,7 +51,7 @@ public class Client {
     }
 
     private Client() throws SpreadException {
-        me = "srv-" + UUID.randomUUID();
+        me = "cli-" + UUID.randomUUID();
         sr = new Serializer();
         threadContext = new SingleThreadContext("srv-%d", sr);
         spread = new Spread(me, true);
@@ -80,21 +87,23 @@ public class Client {
         sr.register(NewTaskMessage.class);
         sr.register(ResultMessage.class);
         sr.register(TaskMessage.class);
-        sr.register(UrlMessage.class);
+        sr.register(URIMessage.class);
 
         sr.register(DummyTask.class);
         sr.register(DummyResult.class);
+        sr.register(EmptyResult.class);
+
+        sr.register(DuplicateException.class);
         sr.register(Exception.class);
-        sr.register(Task.class);
-        sr.register(SyncTask.class);
-        sr.register(AsyncTask.class);
-        sr.register(Result.class);
+        sr.register(MissingExecutorException.class);
+        sr.register(UnknownClientException.class);
+
+        sr.register(URI.class);
     }
 
     private void openAndJoin() {
         spread.open();
-        mainGroup = spread.join("service");
-        privateGroup = spread.getPrivateGroup();
+        spread.join("service");
     }
 
 
@@ -105,12 +114,12 @@ public class Client {
               .handler(NewTaskMessage.class, this::handler)
               .handler(ResultMessage.class, this::handler)
               .handler(TaskMessage.class, this::handler)
-              .handler(UrlMessage.class, this::handler);
+              .handler(URIMessage.class, this::handler);
     }
 
 
     private void handler(SpreadMessage sm, GetTaskMessage gm) {
-        if(leaderGroup == null && sm.getSender() == privateGroup) {
+        if(leaderGroup == null && sm.getSender().equals(privateGroup)) {
             var s = "GetTaskMessage added to outbound, leader unavailable.";
             LOGGER.info(s);
             outbound.offer(gm);
@@ -122,16 +131,20 @@ public class Client {
 
     private void handler(SpreadMessage sm, MembershipInfo m) {
         if(m.isCausedByLeave()) {
-            if (m.getLeft() == leaderGroup) {
+            if (m.getLeft().equals(leaderGroup)) {
                 LOGGER.info("Leader left");
                 leaderGroup = null;
             }
-            LOGGER.info("Left : " + sm.getSender());
+            LOGGER.info("Left : " + m.getLeft());
         }
         else if (m.isCausedByJoin()) {
-            if(m.getJoined().equals(privateGroup)) {
+            if(m.getJoined().equals(spread.getPrivateGroup())) {
                 //I just joined.
-                mainGroup = m.getGroup();
+                privateGroup = spread.getPrivateGroup();
+                mainGroup = sm.getSender();
+                leaderGroup = Arrays.stream(m.getMembers())
+                                    .filter(s -> !s.toString().substring(1,5).equals("srv-"))
+                                    .findAny().orElse(null);
                 runner.setMaingroup(mainGroup);
                 initTimer();
             }
@@ -145,7 +158,7 @@ public class Client {
                 }
             }
             else {
-                LOGGER.info("Join : " + sm.getSender());
+                LOGGER.info("Join : " + m.getJoined());
             }
         }
     }
@@ -155,8 +168,8 @@ public class Client {
         var random = new Random(me.chars().sum());
         var tg = new TaskGenerator(spread, mainGroup, me);
         var ta = new TaskAssigner(spread, mainGroup, runner);
-        timer.scheduleAtFixedRate(tg,0, random.nextInt(4000)+2000);
-        timer.scheduleAtFixedRate(ta, 0, random.nextInt(4000) + 2000);
+        timer.scheduleAtFixedRate(tg,0, random.nextInt(30000)+10000);
+        timer.scheduleAtFixedRate(ta, 0, random.nextInt(10000)+2000);
     }
 
     private void resend(CommonMessage cm) {
@@ -173,13 +186,18 @@ public class Client {
             outbound.offer(nm);
         }
         else {
-            LOGGER.info("New task posted by : " + nm);
+            LOGGER.info("New task posted by : " + sm.getSender());
         }
     }
 
     private void handler(SpreadMessage sm, ResultMessage rm) {
-        LOGGER.error("Something terrible has happened :",
-                      rm.getResult().completedWithException());
+        var err = rm.getResult().completedWithException();
+        if (err instanceof NoAssignableTasksException) {
+            LOGGER.info("", err);
+        }
+        else {
+            LOGGER.error("", err);
+        }
     }
 
     private void handler(SpreadMessage sm, TaskMessage tm) {
@@ -198,9 +216,9 @@ public class Client {
         }
     }
 
-    private void handler(SpreadMessage sm, UrlMessage um) {
+    private void handler(SpreadMessage sm, URIMessage um) {
         if(leaderGroup == null && sm.getSender().equals(privateGroup)) {
-            var s = "URLMessage added to outbound, leader unavailable : " + um.getUrl();
+            var s = "URLMessage added to outbound, leader unavailable : " + um.getURI();
             LOGGER.info(s);
             outbound.offer(um);
         }
