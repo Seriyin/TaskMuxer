@@ -1,8 +1,4 @@
-package pt.um.tf.taskmuxer.commons.task;
-
-import io.atomix.catalyst.buffer.BufferInput;
-import io.atomix.catalyst.buffer.BufferOutput;
-import io.atomix.catalyst.serializer.Serializer;
+package pt.um.tf.taskmux.commons.task;
 
 public class EmptyResult extends Result<Void> {
     private boolean success;
@@ -34,6 +30,7 @@ public class EmptyResult extends Result<Void> {
         return e;
     }
 
+    /*
     @Override
     public void writeObject(BufferOutput<?> buffer, Serializer serializer) {
         buffer.writeBoolean(success);
@@ -44,6 +41,6 @@ public class EmptyResult extends Result<Void> {
     public void readObject(BufferInput<?> buffer, Serializer serializer) {
         success = buffer.readBoolean();
         e = serializer.readObject(buffer);
-
     }
+    */
 }

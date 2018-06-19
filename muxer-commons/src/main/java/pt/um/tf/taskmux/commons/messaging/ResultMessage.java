@@ -1,9 +1,6 @@
-package pt.um.tf.taskmuxer.commons.messaging;
+package pt.um.tf.taskmux.commons.messaging;
 
-import io.atomix.catalyst.buffer.BufferInput;
-import io.atomix.catalyst.buffer.BufferOutput;
-import io.atomix.catalyst.serializer.Serializer;
-import pt.um.tf.taskmuxer.commons.task.Result;
+import pt.um.tf.taskmux.commons.task.Result;
 
 public class ResultMessage implements CommonMessage {
     private Result result;
@@ -20,6 +17,7 @@ public class ResultMessage implements CommonMessage {
         return result;
     }
 
+    /*
     @Override
     public void writeObject(BufferOutput<?> buffer, Serializer serializer) {
         serializer.writeObject(result);
@@ -29,4 +27,5 @@ public class ResultMessage implements CommonMessage {
     public void readObject(BufferInput<?> buffer, Serializer serializer) {
         result = serializer.readObject(buffer);
     }
+    */
 }

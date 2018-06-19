@@ -1,18 +1,18 @@
-package pt.um.tf.taskmuxer.commons;
+package pt.um.tf.taskmux.commons;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.util.Base64;
 
-public class URLGenerator {
+public class URIGenerator {
     private SecureRandom secureRandom;
 
-    public URLGenerator (String seed) {
+    public URIGenerator(String seed) {
         secureRandom = new SecureRandom(seed.getBytes(StandardCharsets.UTF_8));
     }
 
-    public URLGenerator() {
+    public URIGenerator() {
         secureRandom = new SecureRandom();
     }
 

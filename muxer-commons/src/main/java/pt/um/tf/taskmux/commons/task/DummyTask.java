@@ -1,20 +1,14 @@
-package pt.um.tf.taskmuxer.commons.task;
+package pt.um.tf.taskmux.commons.task;
 
-import io.atomix.catalyst.buffer.BufferInput;
-import io.atomix.catalyst.buffer.BufferOutput;
-import io.atomix.catalyst.serializer.Serializer;
-import pt.um.tf.taskmuxer.commons.error.MissingExecutorException;
+import pt.um.tf.taskmux.commons.error.MissingExecutorException;
 
 import java.util.Random;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.ForkJoinPool;
 
 public class DummyTask extends AsyncTask<Long> {
-    private static long LOOPS_TO_DO = 65536;
+    private static long LOOPS_TO_DO = 16384;
     private CompletableFuture<Result<Long>> cp;
     private boolean started;
-    private ExecutorService executorService;
 
     public DummyTask(String id) {
         super(id);
@@ -33,16 +27,16 @@ public class DummyTask extends AsyncTask<Long> {
     }
 
     private void startUpTask() {
-        if(executorService == null || executorService.isTerminated()) {
+        if(getExecutor() == null || getExecutor().isTerminated()) {
             cp = CompletableFuture.failedFuture(new MissingExecutorException());
         }
         else {
-            cp = CompletableFuture.supplyAsync(this::dummyTask, executorService);
+            cp = CompletableFuture.supplyAsync(this::dummyTask, getExecutor());
         }
     }
 
     private Result<Long> dummyTask() {
-        var r = new Random(getURL().getPath().chars().asLongStream().sum());
+        var r = new Random(getURI().getPath().chars().asLongStream().sum());
         long id = 0;
         //Might intentionally divide by zero.
         //This simulates a possibly throwing long running background task.
@@ -54,7 +48,7 @@ public class DummyTask extends AsyncTask<Long> {
                 id += 2;
                 id /= r.nextLong();
                 try {
-                    Thread.sleep(60);
+                    Thread.sleep(2, 800);
                 } catch (InterruptedException e) {
                     //Silent night, Holy night.
                 }
@@ -82,15 +76,15 @@ public class DummyTask extends AsyncTask<Long> {
         }
     }
 
+    /*
     @Override
     public void writeObject(BufferOutput<?> buffer, Serializer serializer) {
-        serializer.writeObject(getURL());
-        buffer.writeBoolean(started);
+        serializer.writeObject(getURI(), buffer).writeBoolean(started);
     }
 
     @Override
     public void readObject(BufferInput<?> buffer, Serializer serializer) {
-        setUrl(serializer.readObject(buffer));
+        setURI(serializer.readObject(buffer));
         started = buffer.readBoolean();
         executorService = ForkJoinPool.commonPool();
     }
@@ -99,5 +93,5 @@ public class DummyTask extends AsyncTask<Long> {
     public void setExecutor(ExecutorService executorService) {
         this.executorService = executorService;
     }
-
+    */
 }

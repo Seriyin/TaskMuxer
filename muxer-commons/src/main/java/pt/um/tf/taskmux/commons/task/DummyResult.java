@@ -1,8 +1,4 @@
-package pt.um.tf.taskmuxer.commons.task;
-
-import io.atomix.catalyst.buffer.BufferInput;
-import io.atomix.catalyst.buffer.BufferOutput;
-import io.atomix.catalyst.serializer.Serializer;
+package pt.um.tf.taskmux.commons.task;
 
 public class DummyResult extends Result<Long> {
     private long id;
@@ -34,6 +30,7 @@ public class DummyResult extends Result<Long> {
         return e;
     }
 
+    /*
     @Override
     public void writeObject(BufferOutput<?> buffer, Serializer serializer) {
         buffer.writeLong(id);
@@ -47,4 +44,5 @@ public class DummyResult extends Result<Long> {
         e = serializer.readObject(buffer);
         success = buffer.readBoolean();
     }
+    */
 }

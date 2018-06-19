@@ -1,18 +1,16 @@
-package pt.um.tf.taskmuxer.commons.task;
+package pt.um.tf.taskmux.commons.task;
 
-import io.atomix.catalyst.serializer.CatalystSerializable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import pt.um.tf.taskmuxer.commons.URLGenerator;
+import pt.um.tf.taskmux.commons.URIGenerator;
 
-import java.net.MalformedURLException;
+import java.io.Serializable;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URL;
 
-public abstract class Task<T> implements CatalystSerializable {
+public abstract class Task<T> implements Serializable {//implements CatalystSerializable {
     private final static Logger LOGGER = LoggerFactory.getLogger(Task.class);
-    private URL url;
+    private URI url;
 
     public Task(String id) {
         generateUrl(id);
@@ -21,25 +19,25 @@ public abstract class Task<T> implements CatalystSerializable {
     protected Task() {}
 
     private void generateUrl(String id) {
-        var u = new URLGenerator(id);
+        var u = new URIGenerator(id);
         try {
             url = new URI("tcp",
                           null,
                           "localhost",
                           4803,
-                          "dummytask" + u.generateURLPostFix(),
+                          "/dummytask" + u.generateURLPostFix(),
                           null,
-                          null).toURL();
-        } catch (MalformedURLException | URISyntaxException e) {
-            LOGGER.error("", e.getMessage());
+                          null);
+        } catch (URISyntaxException e) {
+            LOGGER.error("", e);
         }
     }
 
-    public URL getURL() {
+    public URI getURI() {
         return url;
     }
 
-    protected void setUrl(URL url) {
+    protected void setURI(URI url) {
         this.url = url;
     }
 

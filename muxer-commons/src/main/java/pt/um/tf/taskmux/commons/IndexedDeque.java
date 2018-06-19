@@ -1,4 +1,4 @@
-package pt.um.tf.taskmuxer.commons;
+package pt.um.tf.taskmux.commons;
 
 
 import java.io.Serializable;
