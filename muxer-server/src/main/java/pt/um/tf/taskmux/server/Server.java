@@ -6,14 +6,15 @@ import io.atomix.catalyst.serializer.Serializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pt.haslab.ekit.Spread;
-import pt.um.tf.taskmuxer.commons.error.DuplicateException;
-import pt.um.tf.taskmuxer.commons.error.UnknownClientException;
+import pt.um.tf.taskmux.commons.error.DuplicateException;
+import pt.um.tf.taskmux.commons.error.MissingExecutorException;
+import pt.um.tf.taskmux.commons.error.UnknownClientException;
+import pt.um.tf.taskmux.commons.messaging.*;
 import pt.um.tf.taskmux.server.messaging.*;
-import pt.um.tf.taskmuxer.commons.messaging.*;
-import pt.um.tf.taskmuxer.commons.task.DummyResult;
-import pt.um.tf.taskmuxer.commons.task.DummyTask;
-import pt.um.tf.taskmuxer.commons.task.EmptyResult;
-import pt.um.tf.taskmuxer.commons.task.Task;
+import pt.um.tf.taskmux.commons.task.DummyResult;
+import pt.um.tf.taskmux.commons.task.DummyTask;
+import pt.um.tf.taskmux.commons.task.EmptyResult;
+import pt.um.tf.taskmux.commons.task.Task;
 import spread.MembershipInfo;
 import spread.SpreadException;
 import spread.SpreadGroup;
@@ -22,7 +23,7 @@ import spread.SpreadMessage;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.net.URL;
+import java.net.URI;
 import java.util.*;
 
 public class Server {
@@ -60,10 +61,10 @@ public class Server {
         spread = new Spread(me, true);
         if (s) {
             quality = Quality.first();
-            trackedMessages = new TrackedMessages();
+            trackedMessages = null;
         } else {
             quality = Quality.initNotReady();
-            trackedMessages = null;
+            trackedMessages = new TrackedMessages();
         }
         taskQueues = new TaskQueues();
         trackedGroups = new TrackedGroups();
@@ -89,28 +90,35 @@ public class Server {
 
     private void register() {
         sr.register(ClearMessage.class);
+        sr.register(DeltaCompleteMessage.class);
         sr.register(DeltaGetMessage.class);
         sr.register(DeltaNewMessage.class);
+        sr.register(InboundMessage.class);
+        sr.register(OutboundMessage.class);
 
         sr.register(GetTaskMessage.class);
         sr.register(NewTaskMessage.class);
         sr.register(ResultMessage.class);
         sr.register(TaskMessage.class);
-        sr.register(InboundMessage.class);
-        sr.register(UrlMessage.class);
+        sr.register(URIMessage.class);
 
         sr.register(DummyTask.class);
         sr.register(DummyResult.class);
+        sr.register(EmptyResult.class);
+
         sr.register(DuplicateException.class);
         sr.register(Exception.class);
+        sr.register(MissingExecutorException.class);
         sr.register(UnknownClientException.class);
+
+        sr.register(URI.class);
     }
 
     private void openAndJoin() {
         spread.open();
-        serverGroup = spread.join("banks");
+        spread.join("servers");
         if(quality == Quality.LEADER) {
-            mainGroup = spread.join("service");
+            spread.join("service");
         }
     }
 
@@ -128,7 +136,7 @@ public class Server {
               .handler(OutboundMessage.class, this::handler)
               .handler(ResultMessage.class, this::handler)
               .handler(TaskMessage.class, this::handler)
-              .handler(UrlMessage.class, this::handler);
+              .handler(URIMessage.class, this::handler);
     }
     
 
@@ -141,14 +149,16 @@ public class Server {
         switch (quality) {
             case LEADER:
                 // I sent it, I know it.
-                var s = "Leader sent Clear for : " + m.getClear();
+                var s = "Leader sent Clear of : " + m.getClear();
                 LOGGER.info(s);
                 break;
             case FOLLOWER:
                 m.getBackToInbound().forEach(taskQueues::addToFrontInbound);
                 taskQueues.clearTasks(m.getClear());
+                LOGGER.info("Got clear of : " + m.getClear());
                 break;
             case NOT_READY:
+                LOGGER.info("Tracking clear of : " + m.getClear());
                 trackedMessages.add(m);
                 break;
         }
@@ -168,8 +178,10 @@ public class Server {
                 break;
             case FOLLOWER:
                 taskQueues.replaceAfterCompleted(m.getSender(), m.getTasks());
+                LOGGER.info("Got delta complete from : " + m.getSender());
                 break;
             case NOT_READY:
+                LOGGER.info("Tracking delta complete from : " + m.getSender());
                 trackedMessages.add(m);
                 break;
         }
@@ -188,30 +200,34 @@ public class Server {
                 LOGGER.info( s);
                 break;
             case FOLLOWER:
-                taskQueues.removeAndSet(m.getIn(), m.getSender(), m.getCount());
+                taskQueues.replaceAfterGet(m.getIn(), m.getSender(), m.getCount());
+                LOGGER.info("Got delta get from : " + m.getSender());
                 break;
             case NOT_READY:
                 trackedMessages.add(m);
+                LOGGER.info("Tracking delta get from : " + m.getSender());
                 break;
         }
     }
 
     /**
-     * Part of state transfer. Add n tasks and to inbound.
-     * @param m DeltaGetMessage carries the tasks and number to add.
+     * Part of state transfer. Add n tasks to inbound.
+     * @param m DeltaNewMessage carries the tasks to add to inbound.
      */
     private void handler(DeltaNewMessage m) {
         switch (quality) {
             case LEADER:
                 // I sent it, I know it.
-                var s = "Leader sent Delta New for : " + m.getSender();
-                LOGGER.info( s);
+                var s = "Leader sent Delta New from : " + m.getSender();
+                LOGGER.info(s);
                 break;
             case FOLLOWER:
                 taskQueues.addAllToBackInbound(m.getIn());
+                LOGGER.info("Got delta new from : " + m.getSender());
                 break;
             case NOT_READY:
                 trackedMessages.add(m);
+                LOGGER.info("Tracking delta new from : " + m.getSender());
                 break;
         }
     }
@@ -249,6 +265,21 @@ public class Server {
     }
 
 
+    private void sendToEveryone(SpreadMessage sm, Collection<Task> out) {
+        if (out!=null && out.size()>0) {
+            var spm = new SpreadMessage();
+            spm.addGroup(serverGroup);
+            spm.setSafe();
+            var dgm = new DeltaGetMessage(sm.getSender().toString(),
+                                          out,
+                                          1);
+            spread.multicast(spm, dgm);
+        }
+    }
+
+
+
+
     private void handler(SpreadMessage sm, InboundMessage im) {
         switch (quality) {
             case LEADER :
@@ -267,10 +298,10 @@ public class Server {
                 if (im.getSequence()==0) {
                     leaderGroup = sm.getSender();
                 }
-                if(im.getReceiver().equals(privateGroup.toString())) {
+                if(!sm.getSender().equals(leaderGroup)) {
                     LOGGER.error("Inbound has wrong leader group");
-                    addUpdate(im);
                 }
+                addUpdate(im);
                 break;
         }
     }
@@ -282,9 +313,9 @@ public class Server {
         spm.addGroup(im.getReceiver());
         spm.setSafe();
         OutboundMessage om;
-        if(taskQueues.outboundIsEmpty()) {
-            Map.Entry<String, Map<URL, Task>> it = taskQueues.getOutboundIterator(im.getReceiver()).next();
-            om = new OutboundMessage(it.getValue().values(),
+        if(!taskQueues.outboundIsEmpty()) {
+            var it = taskQueues.getOutboundIterator(im.getReceiver()).next();
+            om = new OutboundMessage(new ArrayList<>(it.getValue().values()),
                                      false,
                                      im.getSequence()+1,
                                      im.getReceiver(),
@@ -320,37 +351,26 @@ public class Server {
                 LOGGER.info("Inbound for : " + im.getReceiver());
             }
             else {
-                taskQueues.addAllToBackInbound(im.getTask());
+                if(im.getTask() != null) {
+                    taskQueues.addAllToBackInbound(im.getTask());
+                }
                 LOGGER.info("Got Inbound : " + im.getReceiver());
             }
         }
     }
-
-    private void sendToEveryone(SpreadMessage sm, Collection<Task> out) {
-        var spm = new SpreadMessage();
-        spm.addGroup(sm.getSender());
-        spm.setSafe();
-        var dgm = new DeltaGetMessage(sm.getSender().toString(),
-                                      out,
-                                      1);
-        spread.multicast(spm, dgm);
-    }
-
 
     //Handle membership info.
     private void handler(SpreadMessage sm, MembershipInfo m) {
         switch (quality) {
             case LEADER:
                 if (m.isCausedByLeave()) {
-                    leaderOnLeave(m);
+                    leaderOnLeave(sm, m);
 
                 }
                 //Assumption that joined is always a singular group.
                 else if (m.isCausedByJoin()) {
                     if(m.getJoined().equals(spread.getPrivateGroup())) {
-                        privateGroup = spread.getPrivateGroup();
-                        leaderGroup = privateGroup;
-                        trackedGroups.registerKnown(privateGroup);
+                        leaderSelfJoin(sm, m);
                     }
                     else {
                         leaderOnJoin(m);
@@ -378,12 +398,29 @@ public class Server {
                 else if (m.isCausedByJoin()) {
                     if(m.getJoined().equals(spread.getPrivateGroup())) {
                         privateGroup = spread.getPrivateGroup();
+                        serverGroup = sm.getSender();
                         //Assumedly i am a member of the group.
                         trackedGroups.registerKnown(Arrays.asList(m.getMembers()));
                     }
                     trackedGroups.registerKnown(m.getJoined());
                 }
                 break;
+        }
+    }
+
+    private void leaderSelfJoin(SpreadMessage sm, MembershipInfo m) {
+        if(privateGroup == null) {
+            privateGroup = spread.getPrivateGroup();
+            if(quality == Quality.LEADER) {
+                leaderGroup = privateGroup;
+            }
+        }
+        if(sm.getSender().toString().equals("servers")) {
+            trackedGroups.registerKnown(privateGroup);
+            serverGroup = sm.getSender();
+        }
+        else if (sm.getSender().toString().equals("service")) {
+            mainGroup = sm.getSender();
         }
     }
 
@@ -394,8 +431,8 @@ public class Server {
      * Wipe the outbound queue of all client info.
      * @param m Message with leaving client.
      */
-    private void leaderOnLeave(MembershipInfo m) {
-        if(m.getLeft().toString().substring(1,5).equals("cli-")) {
+    private void leaderOnLeave(SpreadMessage sm, MembershipInfo m) {
+        if(sm.getSender().equals(mainGroup)) {
             var mem = m.getLeft();
             Optional<ArrayList<Task>> backToInbound = taskQueues.backToInbound(mem.toString());
             backToInbound.ifPresent(l -> sendClearMessage(l, mem));
@@ -451,18 +488,21 @@ public class Server {
 
     private void followerOnLeave(MembershipInfo m) {
         //Assumption that left group is always size 1.
-        if (leaderGroup == m.getLeft()) {
+        if (leaderGroup.equals(m.getLeft())) {
+            trackedGroups.purgeKnown(m.getLeft());
             var smallest = trackedGroups.getMinKnown();
             if(privateGroup.toString()
                            .compareTo(smallest.toString()) == 0) {
                 quality = quality.rise();
                 mainGroup = spread.join("service");
+                LOGGER.info("Rose to leadership :" + privateGroup);
+                leaderGroup = privateGroup;
                 //Leaders can only fail crash
             }
             else {
-                trackedGroups.purgeKnown(m.getLeft());
                 //smallest is now a Leader, no longer a follower.
                 leaderGroup = smallest;
+                LOGGER.info("New leader :" + smallest);
             }
         }
     }
@@ -495,10 +535,10 @@ public class Server {
                 spm.setSafe();
                 OutboundMessage nom;
                 if (om.hasMore()) {
-                    Iterator<Map.Entry<String, Map<URL, Task>>> out = taskQueues.getOutboundIterator(om.getReceiver());
+                    var out = taskQueues.getOutboundIterator(om.getReceiver());
                     if (out.hasNext()) {
-                        Map.Entry<String, Map<URL, Task>> it = out.next();
-                        nom = new OutboundMessage(it.getValue().values(),
+                        var it = out.next();
+                        nom = new OutboundMessage(new ArrayList<>(it.getValue().values()),
                                                   true,
                                                   om.getSequence()+1,
                                                   om.getReceiver(),
@@ -523,12 +563,20 @@ public class Server {
                 }
                 break;
             case NOT_READY:
-                if(om.getTask() != null) {
-                    taskQueues.removeAndSet(om.getTask(), om.getSender(), 0);
+                if(!om.getReceiver().equals(privateGroup.toString())) {
+                    LOGGER.info("Outbound for : " + om.getReceiver());
                 }
-                if(!om.hasMore()) {
-                    quality = quality.follow();
-                    trackedMessages.handleAll(this::handler);
+                else {
+                    if(om.getTask() != null) {
+                        taskQueues.replaceAfterGet(om.getTask(), om.getSender(), 0);
+                        LOGGER.info("Primed set : " + om.getSequence());
+                    }
+                    if(!om.hasMore()) {
+                        quality = quality.follow();
+                        trackedMessages.handleAll(this::handler);
+                        trackedMessages.wipe();
+                        LOGGER.info("Rose to follower : " + privateGroup);
+                    }
                 }
                 break;
         }
@@ -561,11 +609,11 @@ public class Server {
     }
 
 
-    private void handler(SpreadMessage sm, UrlMessage m) {
+    private void handler(SpreadMessage sm, URIMessage m) {
         switch (quality) {
             case LEADER:
                 var out = taskQueues.purgeOutbound(sm.getSender().toString(),
-                                                   m.getUrl());
+                                                   m.getURI());
                 out.ifPresent(tasks -> {
                     var spm = new SpreadMessage();
                     spm.setSafe();
