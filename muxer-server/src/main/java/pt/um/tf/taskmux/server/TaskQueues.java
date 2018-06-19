@@ -1,18 +1,19 @@
 package pt.um.tf.taskmux.server;
 
-import pt.um.tf.taskmuxer.commons.IndexedDeque;
-import pt.um.tf.taskmuxer.commons.error.DuplicateException;
-import pt.um.tf.taskmuxer.commons.task.Result;
-import pt.um.tf.taskmuxer.commons.task.Task;
+import pt.um.tf.taskmux.commons.IndexedDeque;
+import pt.um.tf.taskmux.commons.error.DuplicateException;
+import pt.um.tf.taskmux.commons.error.NoAssignableTasksException;
+import pt.um.tf.taskmux.commons.task.Result;
+import pt.um.tf.taskmux.commons.task.Task;
 
-import java.net.URL;
+import java.net.URI;
 import java.util.*;
 import java.util.stream.IntStream;
 
 public class TaskQueues {
     private final IndexedDeque<Task> inbound;
-    private final Map<String, Map<URL, Task>> outbound;
-    private final Map<String, Iterator<Map.Entry<String, Map<URL, Task>>>> iteratorMap;
+    private final Map<String, Map<URI, Task>> outbound;
+    private final Map<String, Iterator<Map.Entry<String, Map<URI, Task>>>> iteratorMap;
 
     public TaskQueues() {
         inbound = new IndexedDeque<>();
@@ -30,26 +31,26 @@ public class TaskQueues {
     }
 
     public void clearTasks(String toClear) {
-        outbound.get(toClear).clear();
-        outbound.remove(toClear);
+        if (outbound.containsKey(toClear)) {
+            outbound.get(toClear).clear();
+            outbound.remove(toClear);
+        }
     }
 
     public void replaceAfterCompleted(String sender, Collection<Task> tasks) {
         var map = outbound.get(sender);
         outbound.put(sender, tasks.stream()
                                   .collect(HashMap::new,
-                                           (t, r) -> t.put(r.getURL(), r),
+                                           (t, r) -> t.put(r.getURI(), r),
                                            HashMap::putAll));
     }
 
-    public void removeAndSet(Collection<Task> in, String sender, int count) {
-        var map = outbound.remove(sender);
-        Map<URL, Task> nMap = in.stream()
+    public void replaceAfterGet(Collection<Task> in, String sender, int count) {
+        Map<URI, Task> nMap = in.stream()
                                 .collect(HashMap::new,
-                                         (h, t) -> h.put(t.getURL(), t),
+                                         (h, t) -> h.put(t.getURI(), t),
                                          HashMap::putAll);
         outbound.put(sender, nMap);
-        in.forEach(it -> map.put(it.getURL(), it));
         IntStream.range(0, count)
                  .forEach(i -> inbound.removeFirst());
     }
@@ -59,34 +60,37 @@ public class TaskQueues {
         if (!outbound.containsKey(sender)) {
             outbound.put(sender, new HashMap<>());
         }
-        var in = inbound.getFirst();
-        var out = outbound.get(sender);
-        if (!out.containsKey(in.getURL())) {
-            out.put(in.getURL(), in);
-            taskResult = new TaskResult(true, in, null);
+        if(inboundIsEmpty()) {
+            taskResult = new TaskResult(false, null, new NoAssignableTasksException());
         }
         else {
-            taskResult = new TaskResult(false, null, new DuplicateException());
+            var in = inbound.removeFirst();
+            var out = outbound.get(sender);
+            if (!out.containsKey(in.getURI())) {
+                out.put(in.getURI(), in);
+                taskResult = new TaskResult(true, in, null);
+            }
+            else {
+                taskResult = new TaskResult(false, null, new DuplicateException());
+            }
         }
         return taskResult;
     }
 
     public Optional<ArrayList<Task>> backToInbound(String mem) {
-        Optional<ArrayList<Task>> backToInbound;
+        Optional<ArrayList<Task>> backToInbound = Optional.empty();
         if (outbound.containsKey(mem)) {
             var out = outbound.get(mem);
-            backToInbound = Optional.of(new ArrayList<>(out.size()));
             if(!out.isEmpty()) {
+                var newArr = new ArrayList<Task>(out.size());
                 out.forEach((a, task) -> {
                     inbound.addFirst(task);
-                    backToInbound.ifPresent(l -> l.add(task));
+                    newArr.add(task);
                 });
+                backToInbound = Optional.of(newArr);
                 out.clear();
             }
             outbound.remove(mem);
-        }
-        else {
-            backToInbound = Optional.empty();
         }
         return backToInbound;
     }
@@ -107,8 +111,8 @@ public class TaskQueues {
         return outbound.isEmpty();
     }
 
-    public Iterator<Map.Entry<String, Map<URL, Task>>> getOutboundIterator(String receiver) {
-        Iterator<Map.Entry<String, Map<URL, Task>>> it;
+    public Iterator<Map.Entry<String, Map<URI, Task>>> getOutboundIterator(String receiver) {
+        Iterator<Map.Entry<String, Map<URI, Task>>> it;
         if(!iteratorMap.containsKey(receiver)) {
             it = outbound.entrySet().iterator();
             iteratorMap.put(receiver, it);
@@ -119,12 +123,12 @@ public class TaskQueues {
         return it;
     }
 
-    public Optional<Collection<Task>> purgeOutbound(String sender, URL url) {
+    public Optional<Collection<Task>> purgeOutbound(String sender, URI url) {
         Optional<Collection<Task>> tasks = Optional.empty();
         if (outbound.containsKey(sender)) {
             var out = outbound.get(sender);
             if (out.remove(url) != null) {
-                tasks = Optional.of(outbound.get(sender).values());
+                tasks = Optional.of(new ArrayList<>(outbound.get(sender).values()));
             }
         }
         return tasks;
@@ -137,7 +141,7 @@ public class TaskQueues {
     public Optional<Collection<Task>> getOutbound(String sender) {
         Optional<Collection<Task>> t = Optional.empty();
         if(outbound.containsKey(sender)) {
-            t = Optional.of(outbound.get(sender).values());
+            t = Optional.of(new ArrayList<>(outbound.get(sender).values()));
         }
         return t;
     }
