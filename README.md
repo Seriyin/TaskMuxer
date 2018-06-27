@@ -3,6 +3,12 @@
 A task scheduler heavily reliant on the Spread group
 communications toolkit.
 
+# Build #
+
+Run gradle build for client and server.
+
+> gradle build
+
 ## Servers ##
 
 ### Introduction ###
