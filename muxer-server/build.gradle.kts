@@ -7,6 +7,7 @@ dependencies {
     implementation("pt.haslab", "ekit", extra["ekit_version"] as String)
     implementation("org.slf4j", "slf4j-api", extra["slf4j_version"] as String)
     implementation("org.slf4j", "slf4j-simple", extra["slf4j_version"] as String)
+    implementation("io.github.microutils", "kotlin-logging", extra["kotlinlog_version"] as String)
     testRuntime("org.junit.platform", "junit-platform-launcher", extra["junit-platform_version"] as String)
     testRuntime("org.junit.platform", "junit-platform-runner", extra["junit-platform_version"] as String)
     testRuntime("org.junit.platform", "junit-platform-engine", extra["junit-platform_version"] as String)
@@ -16,12 +17,7 @@ dependencies {
 }
 
 configure<ApplicationPluginConvention> {
-    mainClassName = "pt.um.lei.tf.taskmux.server.Server"
-}
-
-configure<JavaPluginConvention> {
-    sourceCompatibility = JavaVersion.VERSION_1_10
-    targetCompatibility = JavaVersion.VERSION_1_10
+    mainClassName = "pt.um.lei.tf.taskmux.server.MainKt"
 }
 
 tasks.withType<Test> {
