@@ -26,11 +26,11 @@ If a Task is Asynchronous it returns a CompletableFuture.
 
 ## Usage ##
 
-> muxer-server.jar true
+> muxer-server true
 
 Start the first server as the leader.
 
-> muxer-server.jar
+> muxer-server
 
 Run a secondary service.
 
@@ -46,7 +46,7 @@ which take a fair amount of time.
 
 ### Usage ###
 
-> muxer-client.jar
+> muxer-client
 
 Runs a dummy client service.
 
