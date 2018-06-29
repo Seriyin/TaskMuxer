@@ -10,18 +10,11 @@ import java.net.URISyntaxException;
 
 public abstract class Task<T> implements Serializable {//implements CatalystSerializable {
     private final static Logger LOGGER = LoggerFactory.getLogger(Task.class);
-    private URI url;
+    private URI uri;
 
-    public Task(String id) {
-        generateUrl(id);
-    }
-
-    protected Task() {}
-
-    private void generateUrl(String id) {
-        var u = new URIGenerator(id);
-        try {
-            url = new URI("tcp",
+    public Task(URIGenerator u) {
+        try{
+            uri = new URI("tcp",
                           null,
                           "localhost",
                           4803,
@@ -33,12 +26,14 @@ public abstract class Task<T> implements Serializable {//implements CatalystSeri
         }
     }
 
+    protected Task() {}
+
     public URI getURI() {
-        return url;
+        return uri;
     }
 
     protected void setURI(URI url) {
-        this.url = url;
+        this.uri = url;
     }
 
 

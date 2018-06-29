@@ -7,6 +7,7 @@ import io.atomix.catalyst.transport.Server;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pt.haslab.ekit.Spread;
+import pt.um.tf.taskmux.commons.URIGenerator;
 import pt.um.tf.taskmux.commons.error.DuplicateException;
 import pt.um.tf.taskmux.commons.error.MissingExecutorException;
 import pt.um.tf.taskmux.commons.error.NoAssignableTasksException;
@@ -165,8 +166,9 @@ public class Client {
 
     private void initTimer() {
         timer = new Timer();
+        var u = new URIGenerator(me);
         var random = new Random(me.chars().sum());
-        var tg = new TaskGenerator(spread, mainGroup, me);
+        var tg = new TaskGenerator(spread, mainGroup, u);
         var ta = new TaskAssigner(spread, mainGroup, runner);
         timer.scheduleAtFixedRate(tg,0, random.nextInt(30000)+10000);
         timer.scheduleAtFixedRate(ta, 0, random.nextInt(10000)+2000);

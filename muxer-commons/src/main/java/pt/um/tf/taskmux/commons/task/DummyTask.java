@@ -1,5 +1,6 @@
 package pt.um.tf.taskmux.commons.task;
 
+import pt.um.tf.taskmux.commons.URIGenerator;
 import pt.um.tf.taskmux.commons.error.MissingExecutorException;
 
 import java.util.Random;
@@ -10,8 +11,8 @@ public class DummyTask extends AsyncTask<Long> {
     private CompletableFuture<Result<Long>> cp;
     private boolean started;
 
-    public DummyTask(String id) {
-        super(id);
+    public DummyTask(URIGenerator u) {
+        super(u);
         started = false;
     }
 

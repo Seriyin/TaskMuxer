@@ -1,13 +1,15 @@
 package pt.um.tf.taskmux.commons.task;
 
+import pt.um.tf.taskmux.commons.URIGenerator;
+
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 
 public abstract class AsyncTask<T> extends Task<CompletableFuture<Result<T>>> {
     private ExecutorService executorService;
 
-    public AsyncTask(String id) {
-        super(id);
+    public AsyncTask(URIGenerator u) {
+        super(u);
     }
 
     protected AsyncTask() {}
