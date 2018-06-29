@@ -16,7 +16,7 @@ dependencies {
 }
 
 configure<ApplicationPluginConvention> {
-    mainClassName = "pt.um.lei.tf.taskmux.client.Client"
+    mainClassName = "pt.um.tf.taskmux.client.Client"
 }
 
 

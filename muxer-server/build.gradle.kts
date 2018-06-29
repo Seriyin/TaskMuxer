@@ -16,7 +16,7 @@ dependencies {
 }
 
 configure<ApplicationPluginConvention> {
-    mainClassName = "pt.um.lei.tf.taskmux.server.Server"
+    mainClassName = "pt.um.tf.taskmux.server.Server"
 }
 
 configure<JavaPluginConvention> {
