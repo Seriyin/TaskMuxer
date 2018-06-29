@@ -49,7 +49,7 @@ public class Server {
         try {
             main = new Server(leader);
             main.run();
-        } catch (SpreadException | IOException e) {
+        } catch (SpreadException e) {
             LOGGER.error("", e.getMessage());
         }
     }
@@ -70,7 +70,7 @@ public class Server {
         trackedGroups = new TrackedGroups();
     }
 
-    private void run() throws IOException {
+    private void run() {
         register();
         threadContext.execute(this::openAndJoin)
                      .thenRun(this::handlers).exceptionally(t -> {
@@ -78,14 +78,21 @@ public class Server {
                          return null;
                      });
         var bf = new BufferedReader(new InputStreamReader(System.in));
-        while(bf.readLine() == null);
-        if (quality == Quality.LEADER) {
-            spread.leave(mainGroup);
+        try{
+            while(bf.readLine() == null);
         }
-        spread.leave(serverGroup);
-        spread.close();
-        threadContext.close();
-        LOGGER.info("I'm here");
+        catch (IOException e) {
+            LOGGER.error("", e);
+        }
+        finally{
+            if (quality == Quality.LEADER) {
+                spread.leave(mainGroup);
+            }
+            spread.leave(serverGroup);
+            spread.close();
+            threadContext.close();
+            LOGGER.info("I'm here");
+        }
     }
 
     private void register() {
@@ -266,7 +273,7 @@ public class Server {
 
 
     private void sendToEveryone(SpreadMessage sm, Collection<Task> out) {
-        if (out!=null && out.size()>0) {
+        if (!out.isEmpty()) {
             var spm = new SpreadMessage();
             spm.addGroup(serverGroup);
             spm.setSafe();
@@ -292,7 +299,6 @@ public class Server {
                 }
                 break;
             case FOLLOWER:
-                trackUpdates(im);
                 break;
             case NOT_READY:
                 if (im.getSequence()==0) {
@@ -309,37 +315,33 @@ public class Server {
 
 
     private void sendNext(InboundMessage im) {
-        var spm = new SpreadMessage();
-        spm.addGroup(im.getReceiver());
-        spm.setSafe();
-        OutboundMessage om;
-        if(!taskQueues.outboundIsEmpty()) {
-            var it = taskQueues.getOutboundIterator(im.getReceiver()).next();
-            om = new OutboundMessage(new ArrayList<>(it.getValue().values()),
-                                     false,
-                                     im.getSequence()+1,
-                                     im.getReceiver(),
-                                     it.getKey());
+        if(!im.hasMore()) {
+            var spm = new SpreadMessage();
+            spm.addGroup(im.getReceiver());
+            spm.setSafe();
+            OutboundMessage om;
+            if(!taskQueues.outboundIsEmpty()) {
+                var it = taskQueues.getOutboundIterator(im.getReceiver()).next();
+                om = new OutboundMessage(new ArrayList<>(it.getValue().values()),
+                                         false,
+                                         im.getSequence()+1,
+                                         im.getReceiver(),
+                                         it.getKey());
+            }
+            else {
+                om = new OutboundMessage(null,
+                                         false,
+                                         im.getSequence()+1,
+                                         im.getReceiver(),
+                                         null);
+            }
+            spread.multicast(spm, om);
+            LOGGER.info("Partial send to :" + om.getReceiver() + " number " + om.getSequence());
+        } else {
+            LOGGER.error("Partial send of Inbound not implemented");
         }
-        else {
-            om = new OutboundMessage(null,
-                                     false,
-                                     im.getSequence()+1,
-                                     im.getReceiver(),
-                                     null);
-        }
-        spread.multicast(spm, om);
-        LOGGER.info("Partial send to :" + om.getReceiver() + " number " + om.getSequence());
     }
 
-    private void trackUpdates(InboundMessage im) {
-        if(im.hasMore()) {
-            trackedGroups.registerTracked(trackedGroups.getKnown(im.getReceiver()));
-        }
-        else {
-            trackedGroups.purgeTracked(im.getReceiver());
-        }
-    }
 
     private void addUpdate(InboundMessage im) {
         if (im.hasMore()) {
@@ -401,8 +403,9 @@ public class Server {
                         serverGroup = sm.getSender();
                         //Assumedly i am a member of the group.
                         trackedGroups.registerKnown(Arrays.asList(m.getMembers()));
+                    } else {
+                        trackedGroups.registerTracked(m.getJoined());
                     }
-                    trackedGroups.registerKnown(m.getJoined());
                 }
                 break;
         }
@@ -440,35 +443,20 @@ public class Server {
     }
 
     private void sendClearMessage(List<Task> backToInbound, SpreadGroup left) {
-        var spm = new SpreadMessage();
-        spm.setSafe();
-        spm.addGroup(serverGroup);
-        var cm = new ClearMessage(backToInbound, left.toString());
-        spread.multicast(spm, cm);
+        if(!backToInbound.isEmpty()) {
+            var spm = new SpreadMessage();
+            spm.setSafe();
+            spm.addGroup(serverGroup);
+            var cm = new ClearMessage(backToInbound, left.toString());
+            spread.multicast(spm, cm);
+        }
     }
 
 
     private void leaderOnJoin(MembershipInfo m) {
         if(m.getGroup().equals(serverGroup)) {
-            var spm = new SpreadMessage();
-            spm.addGroup(serverGroup);
-            spm.setSafe();
             trackedGroups.registerTracked(m.getJoined());
-            InboundMessage im;
-            if (taskQueues.inboundIsEmpty()) {
-                im = new InboundMessage(null,
-                                        false,
-                                        0,
-                                        m.getJoined().toString());
-            }
-            else {
-                im = new InboundMessage(taskQueues.getInbound(),
-                                        false,
-                                        0,
-                                        m.getJoined().toString());
-            }
-            spread.multicast(spm, im);
-            LOGGER.info("Partial send to :" + im.getReceiver() + " number " + im.getSequence());
+            sendInbound(m.getJoined().toString());
         }
         else if (m.getGroup().equals(mainGroup)) {
             LOGGER.info("Client joined: " + m.getJoined());
@@ -478,6 +466,20 @@ public class Server {
         }
     }
 
+    private void sendInbound(String s) {
+        var spm = new SpreadMessage();
+        spm.addGroup(serverGroup);
+        spm.setSafe();
+        InboundMessage im;
+        if (taskQueues.inboundIsEmpty()) {
+            im = new InboundMessage(null, false, 0, s);
+        }
+        else {
+            im = new InboundMessage(taskQueues.getInbound(), false, 0, s);
+        }
+        spread.multicast(spm, im);
+        LOGGER.info("Partial send to :" + im.getReceiver() + " number " + im.getSequence());
+    }
 
 
     private void followerOnJoin(MembershipInfo m) {
@@ -497,6 +499,8 @@ public class Server {
                 mainGroup = spread.join("service");
                 LOGGER.info("Rose to leadership :" + privateGroup);
                 leaderGroup = privateGroup;
+                //Resend inbounds to everyone still not up-to-date
+                trackedGroups.getTracked().forEach(this::sendInbound);
                 //Leaders can only fail crash
             }
             else {
@@ -545,6 +549,7 @@ public class Server {
                                                   it.getKey());
                     }
                     else {
+                        taskQueues.purgeIterator(om.getReceiver());
                         nom = new OutboundMessage(null,
                                                   false,
                                                   om.getSequence()+1,
@@ -558,16 +563,22 @@ public class Server {
                 }
                 break;
             case FOLLOWER:
+                LOGGER.info("Outbound for : " + om.getReceiver());
                 if (!om.hasMore()) {
-                    trackedGroups.registerKnown(privateGroup);
+                    trackedGroups.registerKnown(trackedGroups.getTracked(om.getReceiver()));
+                    trackedGroups.purgeTracked(om.getReceiver());
                 }
                 break;
             case NOT_READY:
                 if(!om.getReceiver().equals(privateGroup.toString())) {
                     LOGGER.info("Outbound for : " + om.getReceiver());
+                    if(!om.hasMore()) {
+                        trackedGroups.registerKnown(trackedGroups.getTracked(om.getReceiver()));
+                        trackedGroups.purgeTracked(om.getReceiver());
+                    }
                 }
                 else {
-                    if(om.getTask() != null) {
+                    if(om.getTask() != null && !om.getTask().isEmpty()) {
                         taskQueues.replaceAfterGet(om.getTask(), om.getSender(), 0);
                         LOGGER.info("Primed set : " + om.getSequence());
                     }

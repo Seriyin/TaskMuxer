@@ -46,7 +46,7 @@ public class Client {
         try {
             var main = new Client();
             main.run();
-        } catch (SpreadException | IOException e) {
+        } catch (SpreadException e) {
             LOGGER.error("", e.getMessage());
         }
     }
@@ -62,7 +62,7 @@ public class Client {
         outbound = new ArrayDeque<>();
     }
 
-    private void run() throws IOException {
+    private void run() {
         register();
         threadContext.execute(this::openAndJoin)
                      .thenRun(this::handlers).exceptionally(t -> {
@@ -70,17 +70,24 @@ public class Client {
                          return null;
                      });
         var bf = new BufferedReader(new InputStreamReader(System.in));
-        while(bf.readLine() == null);
-        if(mainGroup != null) {
-            spread.leave(mainGroup);
+        try{
+            while(bf.readLine() == null);
         }
-        if(timer != null) {
-            timer.cancel();
-            timer.purge();
+        catch (IOException e) {
+            LOGGER.error("", e);
         }
-        spread.close();
-        threadContext.close();
-        LOGGER.info("I'm here");
+        finally{
+            if(mainGroup != null) {
+                spread.leave(mainGroup);
+            }
+            if(timer != null) {
+                timer.cancel();
+                timer.purge();
+            }
+            spread.close();
+            threadContext.close();
+            LOGGER.info("I'm here");
+        }
     }
 
     private void register() {
