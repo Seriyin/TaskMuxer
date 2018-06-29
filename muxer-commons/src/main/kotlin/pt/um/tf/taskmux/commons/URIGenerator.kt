@@ -7,7 +7,6 @@ import java.security.SecureRandom;
 import java.util.Base64;
 
 class URIGenerator (seed: String? = null) {
-    companion object : KLogging()
     private val sR : SecureRandom = SecureRandom(seed?.toByteArray(StandardCharsets.UTF_8))
 
     /**
@@ -15,14 +14,10 @@ class URIGenerator (seed: String? = null) {
      */
     private fun getSHA256(sdata : String) : String {
         val sb = StringBuilder()
-        try {
-            val md = MessageDigest.getInstance("SHA-256")
-            md.update(sdata.toByteArray(StandardCharsets.UTF_8))
-            val byteData = md.digest()
-            sb.append(Base64.getEncoder().encodeToString(byteData))
-        } catch(e : Exception) {
-            logger.error("", e)
-        }
+        val md = MessageDigest.getInstance("SHA-256")
+        md.update(sdata.toByteArray(StandardCharsets.UTF_8))
+        val byteData = md.digest()
+        sb.append(Base64.getEncoder().encodeToString(byteData))
         return sb.toString()
     }
 

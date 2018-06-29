@@ -1,16 +1,17 @@
-package pt.um.tf.taskmux.commons.task;
+package pt.um.tf.taskmux.commons.task
 
-import pt.um.tf.taskmux.commons.error.MissingExecutorException;
+import pt.um.tf.taskmux.commons.URIGenerator
+import pt.um.tf.taskmux.commons.error.MissingExecutorException
 
-import java.util.Random;
-import java.util.concurrent.CompletableFuture;
+import java.util.Random
+import java.util.concurrent.CompletableFuture
 import java.util.function.Supplier
 
-class DummyTask(id : String? = null) : AsyncTask<Long>(id) {
+class DummyTask(u : URIGenerator = URIGenerator()) : AsyncTask<Long>(u) {
     private companion object {
        val LOOPS_TO_DO = 16384
     }
-    private var cp : CompletableFuture<Result<Long>> = CompletableFuture()
+    private var cp : CompletableFuture<Result<Long>>? = null
     private var started : Boolean = false
 
     override fun start(): CompletableFuture<Result<Long>> {
@@ -18,21 +19,21 @@ class DummyTask(id : String? = null) : AsyncTask<Long>(id) {
             started = true
             startUpTask()
         }
-        return cp
+        return cp as CompletableFuture<Result<Long>>
     }
 
     private fun startUpTask() {
-        if(getExecutor().isTerminated) {
-            cp = CompletableFuture.failedFuture(MissingExecutorException())
+        cp = if(executor == null || executor!!.isTerminated) {
+            CompletableFuture.failedFuture(MissingExecutorException())
         }
         else {
-            cp = CompletableFuture.supplyAsync(dummyTask(), getExecutor())
+            CompletableFuture.supplyAsync(dummyTask(), executor)
         }
     }
 
     private fun dummyTask() : Supplier<Result<Long>> {
         return Supplier {
-            val r = Random(getURI()?.path?.chars()?.asLongStream()?.sum() ?: 0)
+            val r = Random(uri.path?.chars()?.asLongStream()?.sum() ?: 0)
             var id = 0L
             //Might intentionally divide by zero.
             //This simulates a possibly throwing long running background task.
@@ -54,33 +55,14 @@ class DummyTask(id : String? = null) : AsyncTask<Long>(id) {
 
 
     override fun completed(): Boolean {
-        return started && !cp.isCancelled && cp.isDone
+        return started && cp != null && !cp!!.isCancelled && !cp!!.isDone
     }
 
     override fun cancel() {
         if(started) {
-            if (!cp.isDone) {
-                cp.cancel(true)
+            if (cp != null && !cp!!.isDone){
+                cp?.cancel(true)
             }
         }
     }
-
-    /*
-    @Override
-    public void writeObject(BufferOutput<?> buffer, Serializer serializer) {
-        serializer.writeObject(getURI(), buffer).writeBoolean(started);
-    }
-
-    @Override
-    public void readObject(BufferInput<?> buffer, Serializer serializer) {
-        setURI(serializer.readObject(buffer));
-        started = buffer.readBoolean();
-        executorService = ForkJoinPool.commonPool();
-    }
-
-    @Override
-    public void setExecutor(ExecutorService executorService) {
-        this.executorService = executorService;
-    }
-    */
 }

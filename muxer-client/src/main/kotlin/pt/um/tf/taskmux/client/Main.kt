@@ -4,6 +4,7 @@ import io.atomix.catalyst.concurrent.SingleThreadContext
 import io.atomix.catalyst.serializer.Serializer
 import mu.KLogging
 import pt.haslab.ekit.Spread
+import pt.um.tf.taskmux.commons.URIGenerator
 import pt.um.tf.taskmux.commons.error.DuplicateException
 import pt.um.tf.taskmux.commons.error.MissingExecutorException
 import pt.um.tf.taskmux.commons.error.NoAssignableTasksException
@@ -30,6 +31,7 @@ class Client {
     private val me = "cli-" + UUID.randomUUID()
     private val sr = Serializer()
     private val threadContext = SingleThreadContext("srv-%d", sr);
+    private val u = URIGenerator(me)
     private val spread = Spread(me, true)
     private val outbound = ArrayDeque<CommonMessage>()
     private val runner = TaskRunner(ForkJoinPool.commonPool(),
@@ -141,7 +143,7 @@ class Client {
     private fun initTimer() {
         timer = Timer()
         val random = Random(me.codePoints().mapToLong{it.toLong()}.sum())
-        val tg = TaskGenerator(spread, mainGroup as SpreadGroup, me)
+        val tg = TaskGenerator(spread, mainGroup as SpreadGroup, u)
         val ta = TaskAssigner(spread, mainGroup as SpreadGroup, runner)
         timer?.scheduleAtFixedRate(tg, 0,
                 random.nextInt(30000).toLong()+10000)

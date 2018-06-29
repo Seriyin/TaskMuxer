@@ -1,15 +1,11 @@
 package pt.um.tf.taskmux.client;
 
-import com.sun.xml.internal.ws.spi.db.BindingContextFactory.LOGGER
 import mu.KLogging
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import pt.haslab.ekit.Spread;
-import pt.um.tf.taskmux.commons.messaging.GetTaskMessage;
-import spread.SpreadGroup;
-import spread.SpreadMessage;
-
-import java.util.TimerTask;
+import pt.haslab.ekit.Spread
+import pt.um.tf.taskmux.commons.messaging.GetTaskMessage
+import spread.SpreadGroup
+import spread.SpreadMessage
+import java.util.*
 
 class TaskAssigner(private val spread : Spread,
                    private val mainGroup : SpreadGroup,

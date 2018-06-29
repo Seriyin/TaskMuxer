@@ -25,6 +25,7 @@ subprojects {
         plugin("kotlin")
     }
 
+    extra["kotlin_version"] = "1.2.50"
     extra["junit-jupiter_version"] = "5.2.0"
     extra["junit-platform_version"] = "1.2.0"
     extra["spread_version"] = "4.4.0"

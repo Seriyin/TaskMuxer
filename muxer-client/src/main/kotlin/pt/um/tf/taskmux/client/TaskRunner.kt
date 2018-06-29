@@ -1,4 +1,4 @@
-package pt.um.tf.taskmux.client;
+package pt.um.tf.taskmux.client
 
 import mu.KLogging
 import pt.haslab.ekit.Spread
@@ -32,26 +32,25 @@ class TaskRunner(private val taskPool : ExecutorService,
     }
 
     fun runTask(t : Task<out Any>) : Boolean {
-        var res = false;
+        var res = false
         if (!isBackedUp()) {
             if (t is DummyTask) {
-                val dt = t
-                dt.executor = taskPool
-                dt.start()
-                  .thenAcceptAsync(this.accept(dt), taskPool)
-                  .exceptionally {
-                      logger.error("", it)
-                      runningTasks.remove()
-                      return@exceptionally null
-                  }
+                t.executor = taskPool
+                t.start()
+                 .thenAcceptAsync(this.accept(t), taskPool)
+                 .exceptionally {
+                     logger.error("", it)
+                     runningTasks.remove()
+                     return@exceptionally null
+                 }
                 runningTasks.add(t)
-                res = true;
+                res = true
             }
             else {
                 logger.error("Unknown task type")
             }
         }
-        return res;
+        return res
     }
 
     private fun accept(dt: DummyTask) : Consumer<Result<Long>> {
