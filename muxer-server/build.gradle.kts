@@ -4,6 +4,7 @@ apply {
 
 
 dependencies {
+    implementation(kotlin("stdlib", extra["kotlin_version"] as String))
     implementation("pt.haslab", "ekit", extra["ekit_version"] as String)
     implementation("org.slf4j", "slf4j-api", extra["slf4j_version"] as String)
     implementation("org.slf4j", "slf4j-simple", extra["slf4j_version"] as String)
@@ -17,7 +18,7 @@ dependencies {
 }
 
 configure<ApplicationPluginConvention> {
-    mainClassName = "pt.um.lei.tf.taskmux.server.MainKt"
+    mainClassName = "pt.um.tf.taskmux.server.MainKt"
 }
 
 tasks.withType<Test> {
