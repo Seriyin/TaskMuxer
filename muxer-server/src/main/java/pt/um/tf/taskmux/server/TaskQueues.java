@@ -150,4 +150,9 @@ public class TaskQueues {
         inbound.clear();
         outbound.clear();
     }
+
+    public void purgeIterator(String receiver) {
+        iteratorMap.remove(receiver);
+    }
+
 }

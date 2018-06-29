@@ -62,4 +62,16 @@ public class TrackedGroups {
     public SpreadGroup getKnown(String receiver) {
         return known.getOrDefault(receiver, null);
     }
+
+    public SpreadGroup getTracked(String receiver) {
+        return tracking.getOrDefault(receiver, null);
+    }
+
+    public boolean isEmptyTracked() {
+        return tracking.isEmpty();
+    }
+
+    public Set<String> getTracked() {
+        return new HashSet<>(tracking.keySet());
+    }
 }
