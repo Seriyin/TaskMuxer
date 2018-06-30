@@ -255,7 +255,11 @@ class Server(s : Boolean) {
             Quality.LEADER -> {
                 if (sm.sender == leaderGroup) {
                     logger.info( "Leader got update")
-                    sendNext(im)
+                    if(im.more) {
+                        sendNext(im)
+                    } else {
+                        logger.error { "Partial send of Inbound not implemented" }
+                    }
                 }
                 else {
                     logger.error("Leader got update from follower!!")
@@ -276,31 +280,26 @@ class Server(s : Boolean) {
 
 
 
-    private fun sendNext(im : InboundMessage) {
-        if(!im.more) {
-            val spm = SpreadMessage()
-            spm.addGroup(serverGroup)
-            spm.setSafe()
-            val it = taskQueues.getOutboundIterator(im.receiver)
-            val om = if(it.hasNext()) {
+    private fun sendNext(m : SequencedMessage) {
+        val spm = SpreadMessage()
+        spm.addGroup(serverGroup)
+        spm.setSafe()
+        var tasks = emptySet<Task<out Any>>()
+        var more = false
+        var sender = ""
+        if(!taskQueues.outboundIsEmpty()) {
+            val it = taskQueues.getOutboundIterator(m.receiver)
+            if(it!!.hasNext()) {
                 val it = it.next()
-                OutboundMessage(setOf(*it.value.values.toTypedArray()),
-                        false,
-                        im.sequence + 1,
-                        im.receiver,
-                        it.key)
+                tasks = setOf(*it.value.values.toTypedArray())
+                more = true
+                sender = it.key
             }
-            else {
-                OutboundMessage(emptySet(),
-                        false,
-                        im.sequence + 1,
-                        im.receiver)
-            }
-            spread.multicast(spm, om)
-            logger.info("Partial send to : ${om.receiver}, number ${om.sequence}")
-        } else {
-            logger.error { "Partial send of Inbound not implemented" }
         }
+        val om = OutboundMessage(tasks, more,
+                                m.sequence + 1, m.receiver, sender)
+        spread.multicast(spm, om)
+        logger.info("Partial send to : ${om.receiver}, number ${om.sequence}")
     }
 
 
@@ -314,7 +313,9 @@ class Server(s : Boolean) {
                 logger.info("Inbound for : ${im.receiver}")
             }
             else {
-                taskQueues.addAllToBackInbound(im.tasks)
+                if(im.tasks.isNotEmpty()) {
+                    taskQueues.addAllToBackInbound(im.tasks)
+                }
                 logger.info("Got Inbound : " + im.receiver)
             }
         }
@@ -477,46 +478,19 @@ class Server(s : Boolean) {
     private fun handler(sm : SpreadMessage, om : OutboundMessage) {
         when (quality) {
             Quality.LEADER -> {
-                val spm = SpreadMessage()
-                spm.addGroup(serverGroup)
-                spm.setSafe()
-                if (om.more) {
-                    val out = taskQueues.getOutboundIterator(om.receiver)
-                    val nom = if (out.hasNext()) {
-                        val it = out.next()
-                        OutboundMessage(setOf(*it.value
-                                .values
-                                .toTypedArray()),
-                                true,
-                                om.sequence + 1,
-                                om.receiver,
-                                it.key)
-                    } else {
-                        taskQueues.purgeIterator(om.receiver)
-                        OutboundMessage(emptySet(),
-                                false,
-                                om.sequence + 1,
-                                om.receiver)
-                    }
-                    spread.multicast(spm, nom)
-                    logger.info("Partial send to : ${om.receiver}, number ${nom.sequence}, ${out.hasNext()}")
+                if(om.more) {
+                    sendNext(om)
                 } else {
                     logger.info("Is up-to-date : ${om.receiver}")
                 }
             }
             Quality.FOLLOWER -> {
                 logger.info("Outbound for : ${om.receiver}")
-                if (!om.more) {
-                    trackedGroups.registerKnown(trackedGroups.getTracked(om.receiver) as SpreadGroup)
-                    trackedGroups.purgeTracked(om.receiver)
-                }
+                setTrackedToKnown(om)
             }
             Quality.NOT_READY -> if (om.receiver != spread.privateGroup.toString()) {
                 logger.info("Outbound for : ${om.receiver}")
-                if (!om.more) {
-                    trackedGroups.registerKnown(trackedGroups.getTracked(om.receiver) as SpreadGroup)
-                    trackedGroups.purgeTracked(om.receiver)
-                }
+                setTrackedToKnown(om)
             } else {
                 if (om.tasks.isNotEmpty()) {
                     taskQueues.replaceAfterGet(om.tasks, om.sender, 0)
@@ -529,6 +503,14 @@ class Server(s : Boolean) {
                     logger.info("Rose to follower : ${spread.privateGroup}")
                 }
             }
+        }
+    }
+
+    private fun setTrackedToKnown(om: OutboundMessage) {
+        if (!om.more) {
+            val t = trackedGroups.getTracked(om.receiver) as SpreadGroup
+            trackedGroups.registerKnown(t)
+            trackedGroups.purgeTracked(om.receiver)
         }
     }
 
