@@ -5,7 +5,7 @@ import pt.um.tf.taskmux.commons.task.Task;
 import java.io.Serializable;
 import java.util.Collection;
 
-public class InboundMessage implements StateMessage {
+public class InboundMessage implements SequencedMessage {
     private Collection<Task> tasks;
     private boolean more;
     private long sequence;
@@ -24,18 +24,22 @@ public class InboundMessage implements StateMessage {
     protected InboundMessage() {
     }
 
-    public Collection<Task> getTask() {
+    @Override
+    public Collection<Task> getTasks() {
         return tasks;
     }
 
+    @Override
     public boolean hasMore() {
         return more;
     }
 
+    @Override
     public long getSequence() {
         return sequence;
     }
 
+    @Override
     public String getReceiver() {
         return receiver;
     }
