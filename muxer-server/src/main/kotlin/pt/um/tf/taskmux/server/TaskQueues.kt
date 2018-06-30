@@ -27,12 +27,30 @@ class TaskQueues {
         outbound.remove(toClear)
     }
 
+    /**
+     * Replaces the current set of tasks tracked to be
+     * in execution by the sender client with a new set
+     * of tasks still in execution by that client after
+     * task completions by that client.
+     * @param sender The id of the client whose running task list has been altered.
+     * @param tasks The resulting set of tasks to replace the current set.
+     */
     fun replaceAfterCompleted(sender : String,
                               tasks : Set<Task<out Any>>) {
         outbound[sender] = tasks.associateByTo(mutableMapOf(),
                                                Task<out Any>::uri)
     }
 
+    /**
+     * Replaces the set of tasks tracked to be in execution by the sender client
+     * with a new set of task still in execution by that client after
+     * task assignments to that client.
+     * Manipulates the inbound queue to remove as many tasks in it as the count
+     * that have been assigned to the client.
+     * @param sender The id of the client whose running task list has been altered.
+     * @param inSet The resulting set of tasks to replace the current set.
+     * @param count The number of tasks to be removed from inbound. to make up for the new set.
+     */
     fun replaceAfterGet(inSet : Set<Task<out Any>>, sender : String, count : Int) {
         outbound[sender] = inSet.associateByTo(mutableMapOf(), Task<out Any>::uri)
         repeat(if (count > inbound.size) inbound.size else count) {

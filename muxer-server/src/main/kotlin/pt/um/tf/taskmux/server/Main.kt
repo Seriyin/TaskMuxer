@@ -123,6 +123,8 @@ class Server(s : Boolean) {
                 logger.info(s)
             }
             Quality.FOLLOWER -> {
+                //Add all tasks that are now discarded from disconnected client
+                //back to the front of the inbound queue.
                 m.backToInbound.forEach(taskQueues::addToFrontInbound)
                 taskQueues.clearTasks(m.clear)
                 logger.info("Got clear of : ${m.clear}")
@@ -136,7 +138,7 @@ class Server(s : Boolean) {
 
 
     /**
-     * Part of state transfer. Remove n tasks and assign tasks to client.
+     * Part of state transfer. Assign new set of tasks to client minus the completed tasks.
      * @param m DeltaCompleteMessage carries the tasks remaining for client.
      */
     private fun handler(m : DeltaCompleteMessage) {
