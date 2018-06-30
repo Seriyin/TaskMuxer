@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URI;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class Server {
     private static Logger LOGGER = LoggerFactory.getLogger(Server.class);
@@ -292,7 +293,12 @@ public class Server {
             case LEADER :
                 if (sm.getSender().equals(leaderGroup)) {
                     LOGGER.info( "Leader got update");
-                    sendNext(im);
+                    if(!im.hasMore()) {
+                        sendNext(im);
+                    }
+                    else {
+                        LOGGER.error("Partial send of Inbound not implemented");
+                    }
                 }
                 else {
                     LOGGER.error("Leader got update from follower!!");
@@ -314,33 +320,35 @@ public class Server {
 
 
 
-    private void sendNext(InboundMessage im) {
-        if(!im.hasMore()) {
-            var spm = new SpreadMessage();
-            spm.addGroup(im.getReceiver());
-            spm.setSafe();
-            OutboundMessage om;
-            if(!taskQueues.outboundIsEmpty()) {
-                var it = taskQueues.getOutboundIterator(im.getReceiver()).next();
-                om = new OutboundMessage(new ArrayList<>(it.getValue().values()),
-                                         false,
-                                         im.getSequence()+1,
-                                         im.getReceiver(),
-                                         it.getKey());
+    private void sendNext(SequencedMessage m) {
+        var spm = new SpreadMessage();
+        spm.addGroup(serverGroup);
+        spm.setSafe();
+        OutboundMessage om;
+        Collection<Task> tasks = new ArrayList<>(0);
+        String sender = "";
+        boolean more = false;
+        if(!taskQueues.outboundIsEmpty()) {
+            var it = taskQueues.getOutboundIterator(m.getReceiver());
+            if(it.hasNext()) {
+                var item = it.next();
+                tasks = item.getValue()
+                                .values()
+                                .stream()
+                                .collect(Collectors.toUnmodifiableList());
+                sender = item.getKey();
+                more = true;
             }
-            else {
-                om = new OutboundMessage(null,
-                                         false,
-                                         im.getSequence()+1,
-                                         im.getReceiver(),
-                                         null);
-            }
-            spread.multicast(spm, om);
-            LOGGER.info("Partial send to :" + om.getReceiver() + " number " + om.getSequence());
-        } else {
-            LOGGER.error("Partial send of Inbound not implemented");
         }
+        om = new OutboundMessage(tasks,
+                                 more,
+                                 m.getSequence() + 1,
+                                 m.getReceiver(),
+                                 sender);
+        spread.multicast(spm, om);
+        LOGGER.info("Partial send to :" + om.getReceiver() + " number " + om.getSequence());
     }
+
 
 
     private void addUpdate(InboundMessage im) {
@@ -353,8 +361,8 @@ public class Server {
                 LOGGER.info("Inbound for : " + im.getReceiver());
             }
             else {
-                if(im.getTask() != null) {
-                    taskQueues.addAllToBackInbound(im.getTask());
+                if(!im.getTasks().isEmpty()) {
+                    taskQueues.addAllToBackInbound(im.getTasks());
                 }
                 LOGGER.info("Got Inbound : " + im.getReceiver());
             }
@@ -472,7 +480,7 @@ public class Server {
         spm.setSafe();
         InboundMessage im;
         if (taskQueues.inboundIsEmpty()) {
-            im = new InboundMessage(null, false, 0, s);
+            im = new InboundMessage(new ArrayList<>(0), false, 0, s);
         }
         else {
             im = new InboundMessage(taskQueues.getInbound(), false, 0, s);
@@ -534,38 +542,18 @@ public class Server {
     private void handler(SpreadMessage sm, OutboundMessage om) {
         switch (quality) {
             case LEADER:
-                var spm = new SpreadMessage();
-                spm.addGroup(serverGroup);
-                spm.setSafe();
-                OutboundMessage nom;
-                if (om.hasMore()) {
-                    var out = taskQueues.getOutboundIterator(om.getReceiver());
-                    if (out.hasNext()) {
-                        var it = out.next();
-                        nom = new OutboundMessage(new ArrayList<>(it.getValue().values()),
-                                                  true,
-                                                  om.getSequence()+1,
-                                                  om.getReceiver(),
-                                                  it.getKey());
-                    }
-                    else {
-                        taskQueues.purgeIterator(om.getReceiver());
-                        nom = new OutboundMessage(null,
-                                                  false,
-                                                  om.getSequence()+1,
-                                                  om.getReceiver(),
-                                                  null);
-                    }
-                    spread.multicast(spm, nom);
-                    LOGGER.info("Partial send to :" + om.getReceiver() + " number " + nom.getSequence());
-                } else {
+                if(!om.hasMore()) {
                     LOGGER.info("Is up-to-date : " + om.getReceiver());
+                }
+                else {
+                    sendNext(om);
                 }
                 break;
             case FOLLOWER:
                 LOGGER.info("Outbound for : " + om.getReceiver());
                 if (!om.hasMore()) {
-                    trackedGroups.registerKnown(trackedGroups.getTracked(om.getReceiver()));
+                    var t = trackedGroups.getTracked(om.getReceiver());
+                    trackedGroups.registerKnown(t);
                     trackedGroups.purgeTracked(om.getReceiver());
                 }
                 break;
@@ -573,13 +561,16 @@ public class Server {
                 if(!om.getReceiver().equals(privateGroup.toString())) {
                     LOGGER.info("Outbound for : " + om.getReceiver());
                     if(!om.hasMore()) {
-                        trackedGroups.registerKnown(trackedGroups.getTracked(om.getReceiver()));
+                        var t = trackedGroups.getTracked(om.getReceiver());
+                        trackedGroups.registerKnown(t);
                         trackedGroups.purgeTracked(om.getReceiver());
                     }
                 }
                 else {
-                    if(om.getTask() != null && !om.getTask().isEmpty()) {
-                        taskQueues.replaceAfterGet(om.getTask(), om.getSender(), 0);
+                    if(!om.getTasks().isEmpty()) {
+                        taskQueues.replaceAfterGet(om.getTasks(),
+                                                   om.getSender(),
+                                                   0);
                         LOGGER.info("Primed set : " + om.getSequence());
                     }
                     if(!om.hasMore()) {
