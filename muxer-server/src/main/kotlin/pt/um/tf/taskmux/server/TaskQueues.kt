@@ -78,14 +78,14 @@ class TaskQueues {
 
     fun outboundIsEmpty() : Boolean = outbound.isEmpty()
 
-    fun getOutboundIterator(receiver : String) : Iterator<Map.Entry<String, Map<URI, Task<out Any>>>> {
+    fun getOutboundIterator(receiver : String) : Iterator<Map.Entry<String, Map<URI, Task<out Any>>>>? {
         return if(!iteratorMap.containsKey(receiver)) {
             val it = outbound.entries.iterator()
             iteratorMap[receiver] = it
             it
         }
         else {
-            iteratorMap[receiver] as Iterator<Map.Entry<String, Map<URI, Task<out Any>>>>
+            iteratorMap[receiver]
         }
     }
 
